@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class MorningFormScreen extends StatefulWidget {
   final String sessionId;
@@ -12,7 +12,7 @@ class MorningFormScreen extends StatefulWidget {
 }
 
 class _MorningFormScreenState extends State<MorningFormScreen> {
-  final _supabase = Supabase.instance.client;
+  
   bool _isLoading = false;
 
   // Form State
@@ -78,7 +78,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final user = _supabase.auth.currentUser;
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
       if (user == null) throw Exception('Not logged in');
 
       // Calculate Scores
@@ -114,8 +114,8 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
         notifications.add('CRITICAL: Patient reported a fall or injury.');
       }
 
-      await _supabase.from('morning_checkins').insert({
-        'patient_id': user.id,
+      await ApiService.post('/morning_checkins', {
+        'patient_id': user['id'],
         'session_id': widget.sessionId,
         'overall_day': _overallDay,
         'active_level': _activeLevel,
@@ -130,7 +130,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
         'readiness_score': readinessScore,
         'compliance_score': complianceScore,
         'smart_notifications': notifications,
-      });
+      }, includeAuth: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

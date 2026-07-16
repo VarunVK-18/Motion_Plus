@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import '../services/api_service.dart';
 import 'auth_service.dart';
 
 class PatientSignUpPage extends StatefulWidget {
@@ -12,7 +12,6 @@ class PatientSignUpPage extends StatefulWidget {
 }
 
 class _PatientSignUpPageState extends State<PatientSignUpPage> {
-  final _supabase = Supabase.instance.client;
   final _firstNameController = TextEditingController();
   final _lastNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -33,7 +32,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
 
   Future<void> _fetchClinics() async {
     try {
-      final response = await _supabase.from('clinics').select('id, name').order('name');
+      final response = await ApiService.get('/clinics', includeAuth: false);
       if (mounted) {
         setState(() {
           _clinics = List<Map<String, dynamic>>.from(response);
@@ -42,7 +41,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingClinics = false);
-      debugPrint('Error fetching clinics: $e');
+      debugPrint('Error fetching clinics: \$e');
     }
   }
 
@@ -80,27 +79,17 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
     AuthService.isSigningUp = true;
 
     try {
-      final response = await _supabase.auth.signUp(
-        email: email,
-        password: password,
-      );
+      final response = await ApiService.post('/auth/register', {
+        'first_name': _firstNameController.text.trim(),
+        'last_name': _lastNameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'role': 'patient',
+        'email': email,
+        'password': password,
+        'clinic_id': _selectedClinicId,
+      }, includeAuth: false);
 
-      if (response.user != null) {
-        await _supabase.from('profiles').upsert({
-          'id': response.user!.id,
-          'first_name': _firstNameController.text.trim(),
-          'last_name': _lastNameController.text.trim(),
-          'full_name':
-              '${_firstNameController.text.trim()} ${_lastNameController.text.trim()}',
-          'phone': _phoneController.text.trim(),
-          'role': 'patient',
-          'email': email,
-          'clinic_id': _selectedClinicId,
-        });
-
-        // Sign the user out so they can log in manually as instructed
-        await _supabase.auth.signOut();
-
+      if (response != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -111,20 +100,11 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
           Navigator.pop(context);
         }
       }
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text(e.toString().replaceAll('Exception: ', '')),
             backgroundColor: const Color(0xFFEF4444),
           ),
         );

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../admin/patient_details.dart';
 import '../admin/therapist_details.dart';
@@ -14,7 +14,7 @@ class GlobalDataView extends StatefulWidget {
 
 class _GlobalDataViewState extends State<GlobalDataView>
     with SingleTickerProviderStateMixin {
-  final _supabase = Supabase.instance.client;
+  
   late TabController _tabController;
 
   @override
@@ -69,12 +69,8 @@ class _GlobalDataViewState extends State<GlobalDataView>
   }
 
   Widget _buildUserList(List<String> roles) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _supabase
-          .from('profiles')
-          .stream(primaryKey: ['id'])
-          .inFilter('role', roles)
-          .order('full_name'),
+    return FutureBuilder(
+      future: ApiService.get('/profiles', includeAuth: true),
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -99,7 +95,8 @@ class _GlobalDataViewState extends State<GlobalDataView>
             !snapshot.hasData) {
           return const Center(child: CircularProgressIndicator());
         }
-        final users = snapshot.data ?? [];
+        final allUsers = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
+        final users = allUsers.where((u) => roles.contains(u['role'])).toList();
         if (users.isEmpty) return _buildEmptyState();
 
         return ListView.builder(

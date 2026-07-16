@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import '../auth/auth_service.dart';
 
 class LogEntrySheet extends StatefulWidget {
@@ -20,20 +20,20 @@ class _LogEntrySheetState extends State<LogEntrySheet> {
   Future<void> _submitLog() async {
     setState(() => _isSubmitting = true);
     try {
-      final supabase = Supabase.instance.client;
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
       // In a real app, get the actual patientId assigned to this caregiver. 
       // For now, we assume the caregiver is logging for a specific patient.
       // We will just use the caregiver's own ID as patient_id for demo if not linked.
-      final userId = supabase.auth.currentUser?.id;
+      final userId = user != null ? user['id'] : null;
       
       if (userId != null) {
-        await supabase.from('caregiver_observation_logs').insert({
+        await ApiService.post('/caregiver_observation_logs', {
           'patient_id': userId, // Placeholder: in real app, get target patient ID
           'logger_id': userId,
           'log_type': widget.logType.toLowerCase(),
           'severity': widget.logType == 'Pain Level' || widget.logType == 'Mood' ? _severity.toInt() : null,
           'notes': _notesController.text,
-        });
+        }, includeAuth: true);
         
         if (mounted) {
           Navigator.pop(context);

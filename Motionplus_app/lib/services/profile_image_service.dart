@@ -2,7 +2,7 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../auth/auth_service.dart';
 
 class ProfileImageService {
   static final ProfileImageService _instance = ProfileImageService._internal();
@@ -12,7 +12,7 @@ class ProfileImageService {
   final ValueNotifier<String?> profileImagePathNotifier = ValueNotifier<String?>(null);
 
   Future<void> loadProfileImage() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = await AuthService.getCurrentUserId();
     if (userId == null) return;
     
     final prefs = await SharedPreferences.getInstance();
@@ -25,7 +25,7 @@ class ProfileImageService {
   }
 
   Future<void> saveProfileImage(File imageFile) async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = await AuthService.getCurrentUserId();
     if (userId == null) return;
 
     final directory = await getApplicationDocumentsDirectory();
@@ -39,7 +39,7 @@ class ProfileImageService {
   }
 
   Future<void> removeProfileImage() async {
-    final userId = Supabase.instance.client.auth.currentUser?.id;
+    final userId = await AuthService.getCurrentUserId();
     if (userId == null) return;
 
     final prefs = await SharedPreferences.getInstance();

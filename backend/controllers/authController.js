@@ -1,12 +1,13 @@
 const Profile = require('../models/Profile');
 const generateToken = require('../utils/generateToken');
+const bcrypt = require('bcryptjs');
 
 // @desc    Register a new user
 // @route   POST /api/auth/register
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { first_name, last_name, phone, role, email, password, clinic_id } = req.body;
+        const { first_name, last_name, phone, role, email, password, clinic_id, specialization } = req.body;
 
         const userExists = await Profile.findOne({ email });
 
@@ -24,7 +25,8 @@ const registerUser = async (req, res) => {
             role,
             email,
             password,
-            clinic_id
+            clinic_id,
+            specialization
         });
 
         if (user) {
@@ -91,8 +93,66 @@ const getUserProfile = async (req, res) => {
     }
 };
 
+// @desc    Mock send OTP
+// @route   POST /api/auth/reset-password
+const resetPassword = async (req, res) => {
+    try {
+        const { email } = req.body;
+        const user = await Profile.findOne({ email });
+        if (!user) {
+            return res.status(404).json({ message: 'User not found' });
+        }
+        res.json({ message: 'OTP sent successfully (mocked)' });
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Mock verify OTP
+// @route   POST /api/auth/verify-otp
+const verifyOTP = async (req, res) => {
+    try {
+        const { email, token } = req.body;
+        const user = await Profile.findOne({ email });
+        if (!user) return res.status(404).json({ message: 'User not found' });
+        
+        // Mock verification
+        if (token === '123456') { // Allow 123456 as a mock OTP for testing
+            res.json({ 
+                message: 'OTP verified', 
+                token: generateToken(user._id) // log them in so they can update password
+            });
+        } else {
+            res.status(400).json({ message: 'Invalid OTP' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
+// @desc    Update password
+// @route   PUT /api/auth/update-password
+const updatePassword = async (req, res) => {
+    try {
+        const { password } = req.body;
+        const user = await Profile.findById(req.user._id);
+        if (user) {
+            user.password = password;
+            await user.save();
+            res.json({ message: 'Password updated' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error' });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
     getUserProfile,
+    resetPassword,
+    verifyOTP,
+    updatePassword,
 };

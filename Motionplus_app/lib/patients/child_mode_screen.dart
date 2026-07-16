@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart' as hi;
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import '../shared/theme/app_theme.dart';
 import '../shared/widgets/glass_card.dart';
 import 'exercise_tracker_page.dart';
@@ -170,15 +170,17 @@ class ChildModeScreen extends StatelessWidget {
                         icon: hi.HugeIcons.strokeRoundedBackpack01,
                         gradient: const [Color(0xFF60A5FA), Color(0xFF3B82F6)],
                         onTap: () {
-                          final user = Supabase.instance.client.auth.currentUser;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => PatientProfilePage(
-                                email: user?.email ?? '',
+                          ApiService.get('/profiles/me', includeAuth: true).then((user) {
+                            if (!context.mounted) return;
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (context) => PatientProfilePage(
+                                  email: user != null ? user['email'] ?? '' : '',
+                                ),
                               ),
-                            ),
-                          );
+                            );
+                          });
                         },
                       ),
                       _buildFunButton(

@@ -7,7 +7,7 @@ import 'package:hugeicons/hugeicons.dart';
 import 'auth/staff_login.dart';
 import 'auth/patient_login.dart';
 import 'auth/auth_service.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import 'services/api_service.dart';
 
 class SelectionPage extends StatefulWidget {
   const SelectionPage({super.key});
@@ -17,43 +17,40 @@ class SelectionPage extends StatefulWidget {
 }
 
 class _SelectionPageState extends State<SelectionPage> {
-  StreamSubscription<AuthState>? _authStateSubscription;
   bool _redirecting = false;
 
   @override
   void initState() {
     super.initState();
-    _authStateSubscription = Supabase.instance.client.auth.onAuthStateChange.listen((data) {
-      if (_redirecting) return;
-      final session = data.session;
-      if (session != null) {
-        if (AuthService.isPasswordRecovery || AuthService.isSigningUp) return;
-        
-        if (mounted) {
-          setState(() {
-            _redirecting = true;
-          });
-        }
-        WidgetsBinding.instance.addPostFrameCallback((_) async {
-          if (mounted) {
-            try {
-              await AuthService.handleRedirection(context);
-            } catch (e) {
-              if (mounted) {
-                setState(() {
-                  _redirecting = false;
-                });
-              }
-            }
-          }
+    _checkToken();
+  }
+
+  Future<void> _checkToken() async {
+    final token = await ApiService.getToken();
+    if (token != null) {
+      if (AuthService.isPasswordRecovery || AuthService.isSigningUp) return;
+      
+      if (mounted) {
+        setState(() {
+          _redirecting = true;
         });
       }
-    });
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (mounted) {
+          try {
+            await AuthService.handleRedirection(context);
+          } catch (e) {
+            if (mounted) {
+              setState(() => _redirecting = false);
+            }
+          }
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
-    _authStateSubscription?.cancel();
     super.dispose();
   }
 

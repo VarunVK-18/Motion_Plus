@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'log_entry_sheet.dart';
 import 'morningform.dart';
 import 'reminders_page.dart';
@@ -32,16 +32,11 @@ class CaregiverDashboard extends StatelessWidget {
     );
 
     try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser!.id;
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
+      final userId = user['id'];
 
       // 1. Check if morning form is already submitted in the current cycle
-      final checkins = await supabase
-          .from('morning_checkins')
-          .select('id')
-          .eq('patient_id', userId)
-          .gte('created_at', currentCycleStart.toIso8601String())
-          .lt('created_at', currentCycleEnd.toIso8601String());
+      final checkins = await ApiService.get('/morning_checkins?patient_id=$userId&created_at[gte]=${currentCycleStart.toIso8601String()}&created_at[lt]=${currentCycleEnd.toIso8601String()}', includeAuth: true);
 
       if (!context.mounted) return;
 
@@ -64,13 +59,7 @@ class CaregiverDashboard extends StatelessWidget {
       }
 
       // 2. Check if a therapy session was done yesterday
-      final sessions = await supabase
-          .from('sessions')
-          .select('id')
-          .eq('patient_id', userId)
-          .eq('status', 'completed')
-          .gte('scheduled_date', previousCycleStart.toIso8601String())
-          .lt('scheduled_date', previousCycleEnd.toIso8601String());
+      final sessions = await ApiService.get('/sessions?patient_id=$userId&status=completed&scheduled_date[gte]=${previousCycleStart.toIso8601String()}&scheduled_date[lt]=${previousCycleEnd.toIso8601String()}', includeAuth: true);
           
       if (!context.mounted) return;
       Navigator.pop(context); // Close loading

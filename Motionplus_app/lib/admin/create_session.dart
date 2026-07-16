@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'patient_details.dart';
+import '../services/api_service.dart';
 
 class CreateSessionPage extends StatefulWidget {
   const CreateSessionPage({super.key});
@@ -12,20 +12,16 @@ class CreateSessionPage extends StatefulWidget {
 }
 
 class _CreateSessionPageState extends State<CreateSessionPage> {
-  final _supabase = Supabase.instance.client;
   final _feeController = TextEditingController();
 
-  final ValueNotifier<String?> _selectedPatientId = ValueNotifier<String?>(
-    null,
-  );
-  final ValueNotifier<String?> _selectedSpecialization = ValueNotifier<String?>(
-    'Ortho',
-  );
+  final ValueNotifier<String?> _selectedPatientId = ValueNotifier<String?>(null);
+  final ValueNotifier<String?> _selectedSpecialization = ValueNotifier<String?>('Ortho');
   final ValueNotifier<String?> _selectedLocation = ValueNotifier<String?>(null);
   final ValueNotifier<String?> _selectedPackage = ValueNotifier<String?>(null);
 
   bool _isLoading = false;
   dynamic _adminClinicId;
+  Map<String, dynamic>? currentUser;
 
   Map<String, String> _livePackages = {
     'Session-based Packages': '500',
@@ -65,18 +61,16 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
   }
 
   Future<void> _fetchAdminClinicId() async {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      try {
-        final data = await _supabase.from('profiles').select('clinic_id').eq('id', user.id).single();
-        if (mounted) {
-          setState(() {
-            _adminClinicId = data['clinic_id'];
-          });
-        }
-      } catch (e) {
-        debugPrint('Error fetching admin clinic: $e');
+    try {
+      final user = await ApiService.get('/auth/me', includeAuth: true);
+      if (mounted) {
+        setState(() {
+          currentUser = user;
+          _adminClinicId = user['clinic_id'];
+        });
       }
+    } catch (e) {
+      debugPrint('Error fetching admin clinic: \$e');
     }
   }
 
@@ -93,23 +87,20 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
 
   Future<void> _createSession() async {
     if (_selectedPatientId.value == null || _feeController.text.isEmpty) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all fields')));
       return;
     }
 
     setState(() => _isLoading = true);
     try {
-      await _supabase.from('sessions').insert({
+      await ApiService.post('/sessions', {
         'patient_id': _selectedPatientId.value,
-        'clinic_id': _adminClinicId, // Assign to Admin's clinic
-        'specialization_required':
-            _selectedSpecialization.value?.toLowerCase() ?? 'ortho',
+        'clinic_id': _adminClinicId,
+        'specialization_required': _selectedSpecialization.value?.toLowerCase() ?? 'ortho',
         'fee_charged': double.parse(_feeController.text),
         'status': 'pending',
         'location': _selectedLocation.value ?? 'TBD',
-      });
+      }, includeAuth: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -125,7 +116,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: $e'),
+            content: Text('Error: \$e'),
             backgroundColor: const Color(0xFFBE123C),
           ),
         );
@@ -162,7 +153,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Clinic $title',
+              'Clinic \$title',
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -173,15 +164,8 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             Expanded(
               child: FutureBuilder(
                 future: _adminClinicId != null 
-                  ? _supabase
-                      .from('profiles')
-                      .select('id, full_name, phone, specialization, email')
-                      .eq('role', role)
-                      .eq('clinic_id', _adminClinicId!)
-                  : _supabase
-                      .from('profiles')
-                      .select('id, full_name, phone, specialization, email')
-                      .eq('role', role),
+                  ? ApiService.get('/profiles?role=\$role&clinic_id=\$_adminClinicId', includeAuth: true)
+                  : ApiService.get('/profiles?role=\$role', includeAuth: true),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -190,7 +174,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                   if (list.isEmpty) {
                     return Center(
                       child: Text(
-                        'No $title found.',
+                        'No \$title found.',
                         style: GoogleFonts.outfit(color: Colors.grey),
                       ),
                     );
@@ -198,8 +182,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
 
                   return ListView.separated(
                     itemCount: list.length,
-                    separatorBuilder: (_, _) =>
-                        const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                    separatorBuilder: (_, _) => const Divider(height: 1, color: Color(0xFFF1F5F9)),
                     itemBuilder: (context, index) {
                       final person = list[index];
                       final name = person['full_name'] ?? 'Unknown';
@@ -261,11 +244,11 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                                   children: [
                                     Text('Name: $name', style: GoogleFonts.outfit(fontSize: 15)),
                                     const SizedBox(height: 8),
-                                    Text('Email: ${person['email'] ?? 'No Email'}', style: GoogleFonts.outfit(fontSize: 15)),
+                                    Text("Email: ${person['email'] ?? 'No Email'}", style: GoogleFonts.outfit(fontSize: 15)),
                                     const SizedBox(height: 8),
-                                    Text('Phone: ${person['phone'] ?? '---'}', style: GoogleFonts.outfit(fontSize: 15)),
+                                    Text("Phone: ${person['phone'] ?? '---'}", style: GoogleFonts.outfit(fontSize: 15)),
                                     const SizedBox(height: 8),
-                                    Text('Specialization: ${(person['specialization'] ?? 'N/A').toString().toUpperCase()}', style: GoogleFonts.outfit(fontSize: 15)),
+                                    Text("Specialization: ${(person['specialization'] ?? 'N/A').toString().toUpperCase()}", style: GoogleFonts.outfit(fontSize: 15)),
                                   ],
                                 ),
                                 actions: [
@@ -292,8 +275,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUser = _supabase.auth.currentUser;
-    final adminName = currentUser?.userMetadata?['full_name'] ?? 'Admin';
+    final adminName = currentUser?['full_name'] ?? 'Admin';
 
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
@@ -337,15 +319,8 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                 _buildSectionTitle('Select Patient', Icons.person_search),
                 FutureBuilder(
                   future: _adminClinicId != null
-                    ? _supabase
-                        .from('profiles')
-                        .select()
-                        .eq('role', 'patient')
-                        .eq('clinic_id', _adminClinicId)
-                    : _supabase
-                        .from('profiles')
-                        .select()
-                        .eq('role', 'patient'),
+                    ? ApiService.get('/profiles?role=patient&clinic_id=\$_adminClinicId', includeAuth: true)
+                    : ApiService.get('/profiles?role=patient', includeAuth: true),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
                       return Padding(
@@ -372,60 +347,44 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                     return _buildModernDropdown(
                       hint: 'Choose from list',
                       listenable: _selectedPatientId,
-                      items: patients
-                          .map(
-                            (p) => DropdownItem<String>(
-                              value: p['id'].toString(),
-                              child: Text(p['full_name'] ?? 'Unknown'),
-                            ),
-                          )
-                          .toList(),
+                      items: patients.map((p) => DropdownItem<String>(
+                        value: p['id'].toString(),
+                        child: Text(p['full_name'] ?? 'Unknown'),
+                      )).toList(),
                       showSearch: true,
                     );
                   },
                 ),
                 const SizedBox(height: 18),
-                _buildSectionTitle(
-                  'Specialization Needed',
-                  Icons.medical_services_outlined,
-                ),
+                _buildSectionTitle('Specialization Needed', Icons.medical_services_outlined),
                 _buildModernDropdown(
                   hint: 'Select category',
                   listenable: _selectedSpecialization,
-                  items: _specializations
-                      .map(
-                        (s) => DropdownItem<String>(value: s, child: Text(s)),
-                      )
-                      .toList(),
+                  items: _specializations.map((s) => DropdownItem<String>(value: s, child: Text(s))).toList(),
                 ),
                 const SizedBox(height: 18),
-                _buildSectionTitle(
-                  'Clinic Location',
-                  Icons.location_on_outlined,
-                ),
-                FutureBuilder<List<Map<String, dynamic>>>(
-                  future: _supabase.from('clinics').select().order('name'),
+                _buildSectionTitle('Clinic Location', Icons.location_on_outlined),
+                FutureBuilder(
+                  future: ApiService.get('/clinics', includeAuth: true),
                   builder: (context, snapshot) {
                     if (!snapshot.hasData) {
                       return const LinearProgressIndicator();
                     }
-                    final clinics = snapshot.data ?? [];
+                    final clinics = snapshot.data as List<dynamic>? ?? [];
                     return _buildModernDropdown(
                       hint: 'Select Clinic Location',
                       listenable: _selectedLocation,
-                      items: clinics.map((c) {
-                        return DropdownItem<String>(
-                          value: c['name'],
-                          child: Text(c['name'] ?? 'Unnamed Clinic'),
-                        );
-                      }).toList(),
+                      items: clinics.map((c) => DropdownItem<String>(
+                        value: c['name'],
+                        child: Text(c['name'] ?? 'Unnamed Clinic'),
+                      )).toList(),
                     );
                   },
                 ),
                 const SizedBox(height: 18),
                 _buildSectionTitle('Payment Package', Icons.local_offer_outlined),
-                StreamBuilder(
-                  stream: _supabase.from('platform_settings').stream(primaryKey: ['id']),
+                FutureBuilder(
+                  future: ApiService.get('/settings', includeAuth: true),
                   builder: (context, snapshot) {
                     if (snapshot.hasData) {
                       final settings = {
@@ -463,10 +422,9 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                     fontWeight: FontWeight.w600,
                     fontSize: 14,
                   ),
-                  decoration: _inputDecoration('Enter amount in Rupees')
-                      .copyWith(
-                        prefixIcon: const Icon(Icons.currency_rupee, size: 16),
-                      ),
+                  decoration: _inputDecoration('Enter amount in Rupees').copyWith(
+                    prefixIcon: const Icon(Icons.currency_rupee, size: 16),
+                  ),
                 ),
                 const SizedBox(height: 24),
                 SizedBox(
@@ -477,9 +435,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF3E84DC),
                       foregroundColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15),
-                      ),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                       elevation: 0,
                     ),
                     child: _isLoading
@@ -536,17 +492,9 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
     );
   }
 
-  Widget _buildClickableCard(
-    String title,
-    String role,
-    IconData icon,
-    Color themeColor,
-    Color bgColor,
-  ) {
-    return StreamBuilder(
-      stream: _supabase
-          .from('profiles')
-          .stream(primaryKey: ['id']),
+  Widget _buildClickableCard(String title, String role, IconData icon, Color themeColor, Color bgColor) {
+    return FutureBuilder(
+      future: ApiService.get('/profiles', includeAuth: true),
       builder: (context, snapshot) {
         var count = 0;
         if (snapshot.hasData) {
@@ -649,12 +597,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                 searchBarWidgetHeight: 50,
                 searchBarWidget: Container(
                   height: 50,
-                  padding: const EdgeInsets.only(
-                    top: 8,
-                    bottom: 4,
-                    right: 8,
-                    left: 8,
-                  ),
+                  padding: const EdgeInsets.only(top: 8, bottom: 4, right: 8, left: 8),
                   child: TextFormField(
                     expands: true,
                     maxLines: null,
@@ -662,31 +605,22 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                     style: GoogleFonts.outfit(fontSize: 13),
                     decoration: InputDecoration(
                       isDense: true,
-                      contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 10,
-                        vertical: 8,
-                      ),
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
                       hintText: 'Search patient...',
                       hintStyle: GoogleFonts.outfit(fontSize: 12),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(8),
-                      ),
+                      border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                       prefixIcon: const Icon(Icons.search, size: 16),
                     ),
                   ),
                 ),
                 searchMatchFn: (item, searchValue) {
                   final itemText = (item.child as Text).data ?? '';
-                  return itemText.toLowerCase().contains(
-                    searchValue.toLowerCase(),
-                  );
+                  return itemText.toLowerCase().contains(searchValue.toLowerCase());
                 },
               )
             : null,
         onMenuStateChange: (isOpen) {
-          if (!isOpen) {
-            _searchController.clear();
-          }
+          if (!isOpen) _searchController.clear();
         },
       ),
     );

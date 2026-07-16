@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../services/api_service.dart';
 
 class PlatformSettingsPage extends StatefulWidget {
   const PlatformSettingsPage({super.key});
@@ -11,7 +11,19 @@ class PlatformSettingsPage extends StatefulWidget {
 }
 
 class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
-  final _supabase = Supabase.instance.client;
+  late Future<List<dynamic>> _settingsFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSettings();
+  }
+
+  void _loadSettings() {
+    setState(() {
+      _settingsFuture = ApiService.get('/settings', includeAuth: true).then((data) => data as List<dynamic>);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,11 +38,19 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _supabase.from('platform_settings').stream(primaryKey: ['id']),
+      body: FutureBuilder<List<dynamic>>(
+        future: _settingsFuture,
         builder: (context, snapshot) {
+          if (snapshot.hasError) {
+             return Center(child: Text('Error: \${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+             return const Center(child: CircularProgressIndicator());
+          }
+
+          final settingsList = snapshot.data ?? [];
           final settings = {
-            for (var s in (snapshot.data ?? [])) s['key']: s['value'],
+            for (var s in settingsList) s['key']: s['value'],
           };
 
           return ListView(
@@ -51,7 +71,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
                 _buildSettingTile(
                   HugeIcons.strokeRoundedKey01,
                   'Password Policy',
-                  'Strength: ${settings['password_strength'] ?? 'Strong'}',
+                  "Strength: \${settings['password_strength'] ?? 'Strong'}",
                   onTap: () => _showPolicyDialog(
                     'password_strength',
                     settings['password_strength'],
@@ -67,15 +87,17 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
 
   Future<void> _updateSetting(String key, String value) async {
     try {
-      await _supabase.from('platform_settings').upsert({
+      await ApiService.post('/settings', {
         'key': key,
         'value': value,
-      }, onConflict: 'key');
+      }, includeAuth: true);
+      
+      _loadSettings();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to update setting: $e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to update setting: \$e')));
       }
     }
   }
@@ -189,7 +211,6 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
     );
   }
-
 
   void _showPolicyDialog(String key, String? current) {
     // Implementation for policy dialog

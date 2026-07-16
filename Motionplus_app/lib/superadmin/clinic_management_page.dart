@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class ClinicManagementPage extends StatefulWidget {
   const ClinicManagementPage({super.key});
@@ -10,13 +10,25 @@ class ClinicManagementPage extends StatefulWidget {
 }
 
 class _ClinicManagementPageState extends State<ClinicManagementPage> {
-  final _supabase = Supabase.instance.client;
   bool _isLoading = false;
+  late Future<List<dynamic>> _clinicsFuture;
 
   // Controllers for the form
   final _nameController = TextEditingController();
   final _addressController = TextEditingController();
   final _phoneController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadClinics();
+  }
+
+  void _loadClinics() {
+    setState(() {
+      _clinicsFuture = ApiService.get('/clinics', includeAuth: true).then((data) => data as List<dynamic>);
+    });
+  }
 
   Future<void> _addClinic() async {
     // Basic Validation
@@ -30,24 +42,26 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _supabase.from('clinics').insert({
+      await ApiService.post('/clinics', {
         'name': _nameController.text.trim(),
         'address': _addressController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'created_at': DateTime.now().toIso8601String(),
-      });
+      }, includeAuth: true);
 
       if (mounted) {
         Navigator.pop(context); // Close dialog
         _clearControllers();
+        _loadClinics();
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('New branch added successfully!'), backgroundColor: Colors.green),
         );
       }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error: \$e'), backgroundColor: Colors.red),
+        );
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -161,8 +175,8 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
           const SizedBox(width: 8),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _supabase.from('clinics').stream(primaryKey: ['id']).order('name'),
+      body: FutureBuilder<List<dynamic>>(
+        future: _clinicsFuture,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -176,9 +190,10 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
                     style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.redAccent),
                   ),
                   Text(
-                    'Please check your internet',
+                    'Please check your internet or backend',
                     style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
                   ),
+                  TextButton(onPressed: _loadClinics, child: const Text('Retry'))
                 ],
               ),
             );
@@ -202,7 +217,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
     );
   }
 
-  Widget _buildClinicCard(Map<String, dynamic> clinic) {
+  Widget _buildClinicCard(dynamic clinic) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
@@ -267,7 +282,21 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
         trailing: IconButton(
           icon: const Icon(Icons.delete_outline_rounded, color: Colors.redAccent),
           onPressed: () async {
-            await _supabase.from('clinics').delete().eq('id', clinic['id']);
+            try {
+              await ApiService.delete("/clinics/${clinic['id']}");
+              _loadClinics();
+              if (mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Clinic deleted successfully'), backgroundColor: Colors.green),
+                );
+              }
+            } catch (e) {
+               if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to delete: \$e'), backgroundColor: Colors.red),
+                  );
+               }
+            }
           },
         ),
       ),

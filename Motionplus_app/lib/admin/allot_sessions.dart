@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -15,7 +15,7 @@ class AllotSessionsPage extends StatefulWidget {
 }
 
 class _AllotSessionsPageState extends State<AllotSessionsPage> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? currentUser;
   int _clinicCount = 0;
   int _onlineCount = 0;
   String? _adminClinicId;
@@ -28,38 +28,43 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
   }
 
   Future<void> _fetchAdminClinicId() async {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      try {
-        final data = await _supabase.from('profiles').select('clinic_id').eq('id', user.id).single();
-        if (mounted) {
-          setState(() {
-            _adminClinicId = data['clinic_id'];
-            _isLoading = false;
-          });
-          if (_adminClinicId != null) {
-            _setupCountStream();
-          }
+    try {
+      final user = await ApiService.get('/auth/me', includeAuth: true);
+      if (mounted) {
+        setState(() {
+          currentUser = user;
+          _adminClinicId = user['clinic_id'];
+          _isLoading = false;
+        });
+        if (_adminClinicId != null) {
+          _fetchCounts();
         }
-      } catch (e) {
-        debugPrint('Error fetching admin clinic: $e');
-        if (mounted) setState(() => _isLoading = false);
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error fetching admin clinic: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
 
-  void _setupCountStream() {
+  Future<void> _fetchCounts() async {
     if (_adminClinicId == null) return;
-    _supabase.from('sessions').stream(primaryKey: ['id']).eq('clinic_id', _adminClinicId!).listen((data) {
+    try {
+      final res = await ApiService.get('/sessions?clinic_id=$_adminClinicId', includeAuth: true);
+      final sessions = (res as List<dynamic>).map((s) {
+        if (s['patient_id'] != null && s['patient_id'] is Map) {
+          s['patient'] = s['patient_id'];
+        }
+        return s;
+      }).toList();
       if (mounted) {
         setState(() {
-          _clinicCount = data.where((s) => s['status'] == 'pending').length;
-          _onlineCount = data.where((s) => s['status'] == 'requested').length;
+          _clinicCount = sessions.where((s) => s['status'] == 'pending').length;
+          _onlineCount = sessions.where((s) => s['status'] == 'requested').length;
         });
       }
-    });
+    } catch (e) {
+      debugPrint('Error fetching counts: $e');
+    }
   }
 
   static const Color primaryGreen = Color(0xFF2D6A4F);
@@ -70,12 +75,8 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
 
   Future<void> _allotTherapist(String sessionId, String specialization) async {
     if (_adminClinicId == null) return;
-    final therapists = await _supabase
-        .from('profiles')
-        .select()
-        .eq('role', 'therapist_assistant')
-        .eq('clinic_id', _adminClinicId!)
-        .eq('specialization', specialization.toLowerCase());
+    final therapistsList = await ApiService.get('/profiles?role=therapist_assistant&clinic_id=$_adminClinicId&specialization=${specialization.toLowerCase()}', includeAuth: true);
+    final therapists = therapistsList as List<dynamic>;
 
     if (therapists.isEmpty) {
       if (mounted) {
@@ -369,19 +370,13 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
                             debugPrint(
                               'Attempting to update session $sessionId',
                             );
-                            await _supabase
-                                .from('sessions')
-                                .update({
-                                  'therapist_id': therapist['id'],
-                                  'status': 'assigned',
-                                  'scheduled_date': selectedDate
-                                      .toIso8601String(),
-                                  'scheduled_time': selectedTime.format(
-                                    context,
-                                  ),
-                                  'session_count': sessionCount,
-                                })
-                                .eq('id', sessionId);
+                            await ApiService.put('/sessions/$sessionId', {
+                              'therapist_id': therapist['id'],
+                              'status': 'assigned',
+                              'scheduled_date': selectedDate.toIso8601String(),
+                              'scheduled_time': selectedTime.format(context),
+                              'session_count': sessionCount,
+                            }, includeAuth: true);
 
                             if (mounted) {
                               Navigator.pop(context);
@@ -543,12 +538,15 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
       );
     }
     return FutureBuilder(
-      future: _supabase
-          .from('sessions')
-          .select('*, profiles!sessions_patient_id_fkey(full_name, phone)')
-          .eq('status', statusFilter)
-          .eq('clinic_id', _adminClinicId!)
-          .order('created_at'),
+      future: ApiService.get('/sessions?clinic_id=$_adminClinicId&status=$statusFilter', includeAuth: true).then((res) async {
+        final sessions = res as List<dynamic>;
+        return sessions.map((s) {
+          if (s['patient_id'] != null && s['patient_id'] is Map) {
+            s['profiles'] = s['patient_id']; // Map patient to profiles to match old UI expectations
+          }
+          return s;
+        }).toList();
+      }),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(
@@ -919,10 +917,7 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
             onPressed: () async {
               final newFee = double.tryParse(controller.text);
               if (newFee != null) {
-                await _supabase
-                    .from('sessions')
-                    .update({'fee_charged': newFee})
-                    .eq('id', sessionId);
+                await ApiService.put('/sessions/$sessionId', {'fee_charged': newFee}, includeAuth: true);
                 if (mounted) {
                   Navigator.pop(context);
                   setState(() {});

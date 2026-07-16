@@ -1,7 +1,8 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,7 +18,7 @@ class AssessmentRepository extends StatefulWidget {
 }
 
 class _AssessmentRepositoryState extends State<AssessmentRepository> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
   List<Map<String, dynamic>> _assessments = [];
   bool _isLoading = true;
   bool _isUploading = false;
@@ -25,16 +26,19 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
   @override
   void initState() {
     super.initState();
-    _fetchAssessments();
+    ApiService.get('/profiles/me', includeAuth: true).then((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user as Map<String, dynamic>?;
+        });
+        _fetchAssessments();
+      }
+    });
   }
 
   Future<void> _fetchAssessments() async {
     try {
-      final response = await _supabase
-          .from('patient_documents')
-          .select()
-          .eq('patient_id', widget.patientId)
-          .order('created_at', ascending: false);
+      final response = await ApiService.get('/patient_documents?patient_id=${widget.patientId}&_sort=created_at:desc', includeAuth: true);
 
       if (mounted) {
         setState(() {
@@ -124,30 +128,40 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
       
       final finalFileName = customName.trim();
 
-      // 1. Upload to Supabase Storage
-      final fileExt = fileName.split('.').last;
-      final uniqueFileName = '${DateTime.now().millisecondsSinceEpoch}_${widget.patientId}.$fileExt';
-      final storagePath = '${widget.patientId}/$uniqueFileName';
-
-      await _supabase.storage.from('patient_documents').upload(
-        storagePath,
-        fileToUpload,
-      );
-
-      // 2. Get public URL
-      final fileUrl = _supabase.storage.from('patient_documents').getPublicUrl(storagePath);
-
-      // 3. Insert into database
-      await _supabase.from('patient_documents').insert({
+      // 1. Convert to Base64 and Upload
+      final bytes = await fileToUpload.readAsBytes();
+      final base64String = base64Encode(bytes);
+      final fileName_ = fileToUpload.path.split('/').last;
+      
+      final endpoint = type == 'PDF' ? '/patient_documents' : '/patient_media_files';
+      
+      final payload = {
         'patient_id': widget.patientId,
-        'title': finalFileName,
-        'type': type,
-        'file_url': fileUrl,
-        'uploader_id': _supabase.auth.currentUser!.id,
+        'file_name': fileName_,
+        'file_url': base64String, // Store base64 directly
+      };
+      if (type == 'PDF') {
+        payload['document_type'] = type;
+      } else {
+        payload['media_type'] = type;
+      }
+      
+      final response = await ApiService.post(endpoint, payload, includeAuth: true);
+      
+      final newDoc = {
+        'id': response['_id'],
+        'patient_id': response['patient_id'],
+        'uploader_id': _currentUser?['id'] ?? response['patient_id'],
+        'file_name': response['file_name'],
+        'file_type': response['document_type'] ?? response['media_type'],
+        'url': response['file_url'],
+        'created_at': response['created_at'] ?? DateTime.now().toUtc().toIso8601String(),
+      };
+      
+      setState(() {
+        _assessments.insert(0, newDoc);
+        _isUploading = false;
       });
-
-      // 4. Refresh list
-      await _fetchAssessments();
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(

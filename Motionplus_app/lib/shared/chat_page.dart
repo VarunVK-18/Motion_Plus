@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
+import '../auth/auth_service.dart';
+import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -21,36 +23,60 @@ class ChatPage extends StatefulWidget {
 
 class _ChatPageState extends State<ChatPage> {
   final _messageController = TextEditingController();
-  final _supabase = Supabase.instance.client;
+  
   final _scrollController = ScrollController();
   String? _editingMessageId;
+  Timer? _pollingTimer;
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _markMessagesAsRead();
+    _fetchMessages();
+    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchMessages());
+  }
+
+  @override
+  void dispose() {
+    _pollingTimer?.cancel();
+    _messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchMessages() async {
+    try {
+      final data = await ApiService.get('/messages?session_id=${widget.sessionId}', includeAuth: true) as List;
+      if (mounted) {
+        setState(() {
+          _messages = data.cast<Map<String, dynamic>>();
+          _isLoading = false;
+        });
+        _markMessagesAsRead();
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
 
   Future<void> _markMessagesAsRead() async {
-    final currentUserId = _supabase.auth.currentUser!.id;
+    final currentUserId = await AuthService.getCurrentUserId();
+    if (currentUserId == null) return;
     try {
-      await _supabase
-          .from('messages')
-          .update({'is_read': true})
-          .eq('session_id', widget.sessionId)
-          .eq('receiver_id', currentUserId)
-          .eq('is_read', false);
+      // Find unread messages for this user and mark them as read
+      for (var msg in _messages) {
+        if (msg['receiver_id'] == currentUserId && msg['is_read'] != true) {
+          await ApiService.put('/messages/${msg['_id'] ?? msg['id']}', {'is_read': true}, includeAuth: true);
+        }
+      }
     } catch (e) {
       debugPrint('Error marking messages as read: $e');
     }
   }
 
-  @override
-  void dispose() {
-    _messageController.dispose();
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   Future<void> _sendMessage() async {
     final text = _messageController.text.trim();
@@ -64,18 +90,18 @@ class _ChatPageState extends State<ChatPage> {
 
     try {
       if (isEditing) {
-        await _supabase
-            .from('messages')
-            .update({'content': text})
-            .eq('id', msgId!);
+        await ApiService.put('/messages/$msgId', {'content': text}, includeAuth: true);
       } else {
-        await _supabase.from('messages').insert({
+        final currentUserId = await AuthService.getCurrentUserId();
+        if (currentUserId == null) return;
+        await ApiService.post('/messages', {
           'session_id': widget.sessionId,
-          'sender_id': _supabase.auth.currentUser!.id,
+          'sender_id': currentUserId,
           'receiver_id': widget.receiverId,
           'content': text,
-        });
+        }, includeAuth: true);
       }
+      _fetchMessages();
       _scrollToBottom();
     } catch (e) {
       if (mounted) {
@@ -88,7 +114,8 @@ class _ChatPageState extends State<ChatPage> {
 
   Future<void> _deleteMessage(String id) async {
     try {
-      await _supabase.from('messages').delete().eq('id', id);
+      await ApiService.delete('/messages/$id', includeAuth: true);
+      _fetchMessages();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
@@ -195,7 +222,7 @@ class _ChatPageState extends State<ChatPage> {
 
   @override
   Widget build(BuildContext context) {
-    final currentUserId = _supabase.auth.currentUser!.id;
+    
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
@@ -245,18 +272,15 @@ class _ChatPageState extends State<ChatPage> {
       body: Column(
         children: [
           Expanded(
-            child: StreamBuilder<List<Map<String, dynamic>>>(
-              stream: _supabase
-                  .from('messages')
-                  .stream(primaryKey: ['id'])
-                  .eq('session_id', widget.sessionId)
-                  .order('created_at', ascending: false),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+            child: FutureBuilder<String?>(
+              future: AuthService.getCurrentUserId(),
+              builder: (context, authSnapshot) {
+                if (_isLoading || !authSnapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                final messages = snapshot.data!;
+                final currentUserId = authSnapshot.data;
+                final messages = _messages;
 
                 return ListView.builder(
                   reverse: true,
@@ -269,7 +293,7 @@ class _ChatPageState extends State<ChatPage> {
                     final time = DateTime.parse(msg['created_at']).toLocal();
 
                     return _buildMessageBubble(
-                      msg['id'],
+                      msg['_id'] ?? msg['id'],
                       msg['content'],
                       isMe,
                       time,

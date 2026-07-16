@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:intl/intl.dart';
 import 'package:hugeicons/hugeicons.dart';
+import '../services/api_service.dart';
 
 class GlobalSchedulePage extends StatefulWidget {
   const GlobalSchedulePage({super.key});
@@ -13,24 +13,26 @@ class GlobalSchedulePage extends StatefulWidget {
 
 class _GlobalSchedulePageState extends State<GlobalSchedulePage>
     with SingleTickerProviderStateMixin {
-  final _supabase = Supabase.instance.client;
   late TabController _tabController;
 
-  late Stream<List<Map<String, dynamic>>> _allSessionsStream;
-  late Stream<List<Map<String, dynamic>>> _requestedStream;
-  late Stream<List<Map<String, dynamic>>> _assignedStream;
-  late Stream<List<Map<String, dynamic>>> _completedStream;
+  late Future<List<dynamic>> _allSessionsFuture;
+  late Future<List<dynamic>> _requestedFuture;
+  late Future<List<dynamic>> _assignedFuture;
+  late Future<List<dynamic>> _completedFuture;
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
 
-    // Initialize streams once
-    _allSessionsStream = _getReactiveSessions(null);
-    _requestedStream = _getReactiveSessions('pending');
-    _assignedStream = _getReactiveSessions('assigned');
-    _completedStream = _getReactiveSessions('completed');
+    _loadData();
+  }
+
+  void _loadData() {
+    _allSessionsFuture = _getSessions(null);
+    _requestedFuture = _getSessions('pending');
+    _assignedFuture = _getSessions('assigned');
+    _completedFuture = _getSessions('completed');
   }
 
   @override
@@ -39,25 +41,17 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
     super.dispose();
   }
 
-  Stream<List<Map<String, dynamic>>> _getReactiveSessions(String? status) {
-    return _supabase.from('sessions').stream(primaryKey: ['id']).asyncMap((
-      _,
-    ) async {
-      try {
-        var query = _supabase
-            .from('sessions')
-            .select(
-              '*, patient:profiles!sessions_patient_id_fkey(full_name, phone), therapist:profiles!sessions_therapist_id_fkey(full_name, phone)',
-            );
-        if (status != null) {
-          query = query.eq('status', status);
-        }
-        final List<dynamic> data = await query.order('scheduled_time');
-        return List<Map<String, dynamic>>.from(data);
-      } catch (e) {
-        return <Map<String, dynamic>>[];
+  Future<List<dynamic>> _getSessions(String? status) async {
+    try {
+      String url = '/sessions';
+      if (status != null) {
+        url += '?status=\$status';
       }
-    });
+      final data = await ApiService.get(url, includeAuth: true);
+      return data as List<dynamic>;
+    } catch (e) {
+      return [];
+    }
   }
 
   @override
@@ -72,6 +66,16 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
         backgroundColor: Theme.of(context).cardColor,
         foregroundColor: Theme.of(context).colorScheme.onSurface,
         elevation: 0,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              setState(() {
+                _loadData();
+              });
+            },
+          ),
+        ],
         bottom: TabBar(
           controller: _tabController,
           isScrollable: true,
@@ -96,21 +100,21 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
       body: TabBarView(
         controller: _tabController,
         children: [
-          _buildSessionList(_allSessionsStream, null),
-          _buildSessionList(_requestedStream, 'pending'),
-          _buildSessionList(_assignedStream, 'assigned'),
-          _buildSessionList(_completedStream, 'completed'),
+          _buildSessionList(_allSessionsFuture, null),
+          _buildSessionList(_requestedFuture, 'pending'),
+          _buildSessionList(_assignedFuture, 'assigned'),
+          _buildSessionList(_completedFuture, 'completed'),
         ],
       ),
     );
   }
 
   Widget _buildSessionList(
-    Stream<List<Map<String, dynamic>>> stream,
+    Future<List<dynamic>> future,
     String? filterStatus,
   ) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: stream,
+    return FutureBuilder<List<dynamic>>(
+      future: future,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
           return Center(
@@ -131,8 +135,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
             ),
           );
         }
-        if (snapshot.connectionState == ConnectionState.waiting &&
-            !snapshot.hasData) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
         final sessions = snapshot.data ?? [];
@@ -142,7 +145,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
           padding: const EdgeInsets.all(16),
           itemCount: sessions.length,
           itemBuilder: (context, index) =>
-              _buildAppointmentCard(sessions[index]),
+              _buildAppointmentCard(sessions[index] as Map<String, dynamic>),
         );
       },
     );
@@ -152,16 +155,26 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
     final status = (session['status'] ?? 'pending').toString().toLowerCase();
     DateTime? scheduledTime;
     try {
-      if (session['scheduled_time'] != null) {
-        scheduledTime = DateTime.parse(session['scheduled_time']).toLocal();
+      if (session['scheduled_at'] != null) {
+        scheduledTime = DateTime.parse(session['scheduled_at']).toLocal();
       }
     } catch (e) {
-      debugPrint('Date parsing error: $e');
+      debugPrint('Date parsing error: \$e');
     }
 
     Color statusColor = Colors.orange;
     if (status == 'completed') statusColor = Colors.green;
     if (status == 'assigned') statusColor = Colors.blue;
+
+    final patientObj = session['patient_id'];
+    final therapistObj = session['therapist_id'];
+    
+    final patientName = patientObj != null && patientObj is Map ? patientObj['full_name'] : 'Unknown';
+    final patientPhone = patientObj != null && patientObj is Map ? patientObj['email'] : 'No Contact';
+
+    final therapistName = therapistObj != null && therapistObj is Map ? therapistObj['full_name'] : 'Unassigned';
+    final therapistPhone = therapistObj != null && therapistObj is Map ? therapistObj['email'] : 'No Contact';
+
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
@@ -203,7 +216,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                           ? DateFormat(
                               'EEE, MMM d • hh:mm a',
                             ).format(scheduledTime)
-                          : (session['scheduled_time'] ?? 'Not scheduled'),
+                          : 'Not scheduled',
                       style: GoogleFonts.outfit(
                         fontWeight: FontWeight.w700,
                         fontSize: 14,
@@ -240,8 +253,8 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
               children: [
                 _buildPersonInfo(
                   'PATIENT',
-                  session['patient']?['full_name'],
-                  session['patient']?['phone'],
+                  patientName,
+                  patientPhone,
                   HugeIcons.strokeRoundedUser,
                   Colors.teal,
                 ),
@@ -254,8 +267,8 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                 const SizedBox(width: 12),
                 _buildPersonInfo(
                   'THERAPIST',
-                  session['therapist']?['full_name'],
-                  session['therapist']?['phone'],
+                  therapistName,
+                  therapistPhone,
                   HugeIcons.strokeRoundedDoctor01,
                   Colors.indigo,
                 ),
@@ -284,7 +297,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      '${session['allotted_time'] ?? session['duration_minutes'] ?? "45"} Mins',
+                      '45 Mins',
                       style: GoogleFonts.outfit(
                         fontSize: 13,
                         color: Theme.of(
@@ -296,7 +309,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                   ],
                 ),
                 Text(
-                  'Charge: ₹${(session['fee_charged'] ?? session['payment_amount'] ?? "0").toString()}',
+                  "Charge: ₹${(session['fee_charged'] ?? 0).toString()}",
                   style: GoogleFonts.outfit(
                     fontSize: 16,
                     fontWeight: FontWeight.w700,

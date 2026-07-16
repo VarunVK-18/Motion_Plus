@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:hugeicons/hugeicons.dart' as hi;
 import '../selection_page.dart';
 import 'dart:io';
@@ -27,7 +27,7 @@ class PatientProfilePage extends StatefulWidget {
 }
 
 class _PatientProfilePageState extends State<PatientProfilePage> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
   String _phone = 'Loading...';
   bool _hasAccess = true;
   bool _isLoadingAccess = true;
@@ -40,7 +40,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   }
 
   Future<void> _checkAccess() async {
-    final currentUserId = _supabase.auth.currentUser?.id;
+    final currentUserId = _currentUser?['id'];
     final targetId = widget.patientId ?? currentUserId;
 
     if (currentUserId == null || targetId == null) {
@@ -54,13 +54,9 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
     }
 
     try {
-      final profile = await _supabase.from('profiles').select('role').eq('id', currentUserId).maybeSingle();
+      final profile = await ApiService.get('/profiles/$currentUserId', includeAuth: true);
       if (profile?['role'] == 'therapist') {
-         final assignments = await _supabase.from('sessions')
-              .select('id')
-              .eq('therapist_id', currentUserId)
-              .eq('patient_id', targetId)
-              .limit(1);
+         final assignments = await ApiService.get('/sessions?therapist_id=$currentUserId&patient_id=$targetId&_limit=1', includeAuth: true);
          if (assignments.isEmpty) {
             _hasAccess = false;
          }
@@ -75,14 +71,10 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   }
 
   Future<void> _fetchUserProfile() async {
-    final targetId = widget.patientId ?? _supabase.auth.currentUser?.id;
+    final targetId = widget.patientId ?? _currentUser?['id'];
     if (targetId != null) {
       try {
-        final response = await _supabase
-            .from('profiles')
-            .select('phone')
-            .eq('id', targetId)
-            .maybeSingle();
+        final response = await ApiService.get('/profiles/$targetId', includeAuth: true);
 
         if (mounted) {
           setState(() {
@@ -258,7 +250,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
         );
       }
 
-      await _supabase.auth.signOut();
+      await ApiService.clearToken();
 
       if (mounted) {
         Navigator.pop(context); // close loading
@@ -521,7 +513,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               ),
             ),
             const SizedBox(height: 16),
-            PatientTimeline(patientId: widget.patientId ?? _supabase.auth.currentUser!.id),
+            PatientTimeline(patientId: widget.patientId ?? _currentUser!['id']),
             const SizedBox(height: 16),
           ],
         ),
@@ -535,7 +527,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   Widget _buildDocumentsTab() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(24),
-      child: AssessmentRepository(patientId: widget.patientId ?? _supabase.auth.currentUser!.id),
+      child: AssessmentRepository(patientId: widget.patientId ?? _currentUser!['id']),
     );
   }
 

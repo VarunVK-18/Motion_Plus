@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'clinic_management_page.dart';
@@ -23,15 +23,15 @@ class SuperAdminDashboard extends StatefulWidget {
 }
 
 class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
-  final _supabase = Supabase.instance.client;
+  
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
-  late Stream<List<Map<String, dynamic>>> _activityStream;
+  late Stream<List<dynamic>> _activityStream;
   final _activityController =
-      StreamController<List<Map<String, dynamic>>>.broadcast();
-  RealtimeChannel? _activityChannel;
-  late Stream<List<Map<String, dynamic>>> _clinicsStream;
-  late Stream<List<Map<String, dynamic>>> _adminsStream;
+      StreamController<List<dynamic>>.broadcast();
+  
+  late Future<List<dynamic>> _clinicsFuture;
+  late Future<List<dynamic>> _adminsFuture;
   Timer? _refreshTimer;
   StreamSubscription? _themeSubscription;
   bool _isDarkMode = false;
@@ -42,59 +42,37 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   @override
   void initState() {
     super.initState();
-    _initActivityStream();
-    _clinicsStream = _supabase.from('clinics').stream(primaryKey: ['id']);
-    _adminsStream = _supabase
-        .from('profiles')
-        .stream(primaryKey: ['id'])
-        .eq('role', 'admin');
+    _activityStream = _activityController.stream;
+    _fetchRecentActivity();
+    _loadData();
 
     // Refresh the UI every 30 seconds to update relative time labels
     _refreshTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
       if (mounted) setState(() {});
     });
 
-    // Listen for Super Admin specific dark mode toggle
-    _themeSubscription = _supabase
-        .from('platform_settings')
-        .stream(primaryKey: ['id'])
-        .eq('key', 'dark_mode_support')
-        .listen((data) {
-          if (data.isNotEmpty && mounted) {
-            final isDark = data.first['value'] == 'true';
-            _isDarkModeNotifier.value = isDark;
-            setState(() {
-              _isDarkMode = isDark;
-            });
-          }
-        });
+    _fetchTheme();
   }
 
-  void _initActivityStream() {
-    _activityStream = _activityController.stream;
-    _fetchRecentActivity();
+  void _loadData() {
+    _clinicsFuture = ApiService.get('/clinics', includeAuth: true).then((res) => res as List<dynamic>);
+    _adminsFuture = ApiService.get('/profiles?role=admin', includeAuth: true).then((res) => res as List<dynamic>);
+  }
 
-    // Listen for any changes in the sessions or profiles tables
-    _activityChannel = _supabase
-        .channel('public:dashboard_activity')
-        .onPostgresChanges(
-          event: PostgresChangeEvent.all,
-          schema: 'public',
-          table: 'sessions',
-          callback: (payload) {
-            _fetchRecentActivity();
-          },
-        )
-        .onPostgresChanges(
-          event: PostgresChangeEvent.insert,
-          schema: 'public',
-          table: 'profiles',
-          callback: (payload) {
-            _fetchRecentActivity();
-          },
-        );
-
-    _activityChannel?.subscribe();
+  Future<void> _fetchTheme() async {
+    try {
+      final data = await ApiService.get('/settings?key=dark_mode_support', includeAuth: true);
+      final settings = data as List<dynamic>;
+      if (settings.isNotEmpty && mounted) {
+        final isDark = settings.first['value'] == 'true';
+        _isDarkModeNotifier.value = isDark;
+        setState(() {
+          _isDarkMode = isDark;
+        });
+      }
+    } catch (e) {
+      debugPrint('Theme fetch error: $e');
+    }
   }
 
   Future<void> _fetchRecentActivity() async {
@@ -119,21 +97,25 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
         endDate = _customDateRange!.end.add(const Duration(days: 1));
       }
 
-      var sessionQuery = _supabase
-          .from('sessions')
-          .select('*, therapist:profiles!sessions_therapist_id_fkey(full_name), patient:profiles!sessions_patient_id_fkey(full_name)');
-
-      var profileQuery = _supabase
-          .from('profiles')
-          .select('*');
+      final sessionDataRaw = await ApiService.get('/sessions', includeAuth: true);
+      final profileDataRaw = await ApiService.get('/profiles', includeAuth: true);
+      
+      List<dynamic> sessionData = sessionDataRaw as List<dynamic>;
+      List<dynamic> profileData = profileDataRaw as List<dynamic>;
 
       if (startDate != null && endDate != null) {
-        sessionQuery = sessionQuery.gte('created_at', startDate.toIso8601String()).lt('created_at', endDate.toIso8601String());
-        profileQuery = profileQuery.gte('created_at', startDate.toIso8601String()).lt('created_at', endDate.toIso8601String());
+        sessionData = sessionData.where((s) {
+          final d = DateTime.tryParse(s['created_at']?.toString() ?? '');
+          if (d == null) return false;
+          return d.isAfter(startDate!) && d.isBefore(endDate!);
+        }).toList();
+        
+        profileData = profileData.where((p) {
+          final d = DateTime.tryParse(p['created_at']?.toString() ?? '');
+          if (d == null) return false;
+          return d.isAfter(startDate!) && d.isBefore(endDate!);
+        }).toList();
       }
-
-      final List<dynamic> sessionData = await sessionQuery.order('created_at', ascending: false).limit(100);
-      final List<dynamic> profileData = await profileQuery.order('created_at', ascending: false).limit(100);
 
       final mappedSessions = sessionData.map<Map<String, dynamic>>((s) {
         final Map<String, dynamic> session = Map<String, dynamic>.from(s as Map);
@@ -449,8 +431,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   Widget _buildStatsRow(BuildContext context) {
     return Row(
       children: [
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _clinicsStream,
+        FutureBuilder<List<dynamic>>(
+          future: _clinicsFuture,
           builder: (context, snapshot) {
             final count = snapshot.data?.length.toString() ?? '...';
             return _buildStatCard(
@@ -464,8 +446,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           },
         ),
         const SizedBox(width: 16),
-        StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _adminsStream,
+        FutureBuilder<List<dynamic>>(
+          future: _adminsFuture,
           builder: (context, snapshot) {
             final count = snapshot.data?.length.toString() ?? '...';
             return _buildStatCard(
@@ -673,7 +655,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ),
             ],
           ),
-          child: StreamBuilder<List<Map<String, dynamic>>>(
+          child: StreamBuilder<List<dynamic>>(
             stream: _activityStream,
             builder: (context, snapshot) {
               if (snapshot.hasError) {
@@ -935,7 +917,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
   void dispose() {
     _refreshTimer?.cancel();
     _themeSubscription?.cancel();
-    _activityChannel?.unsubscribe();
+    
     _activityController.close();
     _isDarkModeNotifier.dispose();
     super.dispose();
@@ -1027,11 +1009,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     ).then((_) {
       if (mounted) {
         setState(() {
-          _clinicsStream = _supabase.from('clinics').stream(primaryKey: ['id']);
-          _adminsStream = _supabase
-              .from('profiles')
-              .stream(primaryKey: ['id'])
-              .eq('role', 'admin');
+          _loadData();
         });
       }
     });
@@ -1100,7 +1078,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     );
 
     if (confirmed == true) {
-      await _supabase.auth.signOut();
+      await ApiService.clearToken();
       if (mounted) {
         Navigator.pushAndRemoveUntil(
           context,

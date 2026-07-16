@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/audit_logger.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class AccessRequestView extends StatefulWidget {
   final String patientId;
@@ -24,28 +24,21 @@ class _AccessRequestViewState extends State<AccessRequestView> {
     setState(() => _isRequesting = true);
 
     try {
-      final supabase = Supabase.instance.client;
-      final therapistId = supabase.auth.currentUser?.id;
+      await ApiService.post('/access-requests', {
+        'patient_id': widget.patientId,
+        'reason': reason,
+      }, includeAuth: true);
 
-      if (therapistId != null) {
-        await supabase.from('access_requests').insert({
-          'therapist_id': therapistId,
-          'patient_id': widget.patientId,
-          'reason': reason,
-          'status': 'PENDING',
+      await AuditLogger.logEvent(
+        action: 'ACCESS_REQUEST',
+        reason: reason,
+        targetId: widget.patientId,
+      );
+
+      if (mounted) {
+        setState(() {
+          _requested = true;
         });
-
-        await AuditLogger.logEvent(
-          action: 'ACCESS_REQUEST',
-          reason: reason,
-          targetId: widget.patientId,
-        );
-
-        if (mounted) {
-          setState(() {
-            _requested = true;
-          });
-        }
       }
     } catch (e) {
       if (mounted) {

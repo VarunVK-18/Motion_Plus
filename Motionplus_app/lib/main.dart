@@ -7,6 +7,7 @@ import 'notifications/notification_service.dart';
 import 'shared/theme/app_theme.dart';
 
 import 'widgets/connectivity_banner.dart';
+import 'core/constants/port.dart'; // Ensure it's imported if needed
 
 final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
@@ -46,4 +47,3 @@ class MainApp extends StatelessWidget {
     );
   }
 }
-

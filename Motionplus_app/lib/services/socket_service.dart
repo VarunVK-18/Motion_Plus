@@ -1,11 +1,11 @@
 import 'package:socket_io_client/socket_io_client.dart' as IO;
-import 'api_service.dart';
+import '../core/constants/port.dart';
 
 class SocketService {
   static IO.Socket? _socket;
 
   static void initializeSocket() {
-    _socket = IO.io(ApiService.baseUrl.replaceAll('/api', ''), <String, dynamic>{
+    _socket = IO.io(PortConstants.backendUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
     });

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 import '../../shared/theme/app_theme.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -16,34 +17,30 @@ class PatientTimeline extends StatefulWidget {
 }
 
 class _PatientTimelineState extends State<PatientTimeline> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
   List<Map<String, dynamic>> _events = [];
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _fetchTimelineEvents();
+    ApiService.get('/profiles/me', includeAuth: true).then((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user as Map<String, dynamic>?;
+        });
+        _fetchTimelineEvents();
+      }
+    });
   }
 
   Future<void> _fetchTimelineEvents() async {
     try {
       // Fetch completed sessions
-      final sessions = await _supabase
-          .from('sessions')
-          .select('id, completed_count, created_at, scheduled_date, status')
-          .eq('patient_id', widget.patientId)
-          .gt('completed_count', 0)
-          .order('scheduled_date', ascending: false)
-          .limit(10);
+      final sessions = await ApiService.get('/sessions?patient_id=${widget.patientId}&completed_count[gt]=0&_sort=scheduled_date:desc&_limit=10', includeAuth: true) as List;
 
       // Fetch morning check-ins
-      final checkins = await _supabase
-          .from('morning_checkins')
-          .select('id, overall_day, created_at')
-          .eq('patient_id', widget.patientId)
-          .order('created_at', ascending: false)
-          .limit(10);
+      final checkins = await ApiService.get('/morning_checkins?patient_id=${widget.patientId}&_sort=created_at:desc&_limit=10', includeAuth: true) as List;
 
       final List<Map<String, dynamic>> mergedEvents = [];
 
@@ -65,12 +62,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
       }
 
       // Fetch patient media files
-      final mediaFiles = await _supabase
-          .from('patient_media_files')
-          .select('id, title, file_type, created_at')
-          .eq('patient_id', widget.patientId)
-          .order('created_at', ascending: false)
-          .limit(10);
+      final mediaFiles = await ApiService.get('/patient_media_files?patient_id=${widget.patientId}&_sort=created_at:desc&_limit=10', includeAuth: true) as List;
 
       for (var m in mediaFiles) {
         mergedEvents.add({
@@ -81,7 +73,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
       }
 
       // Add a registration event
-      final profile = await _supabase.from('profiles').select('created_at').eq('id', widget.patientId).maybeSingle();
+      final profile = await ApiService.get('/profiles/${widget.patientId}', includeAuth: true);
       if (profile != null && profile['created_at'] != null) {
         mergedEvents.add({
           'date': DateTime.parse(profile['created_at']),
@@ -276,27 +268,19 @@ class _PatientTimelineState extends State<PatientTimeline> {
                           : () async {
                               setState(() => isUploading = true);
                               try {
-                                final fileExtension = selectedFile!.name.split('.').last;
-                                final fileName = '${DateTime.now().millisecondsSinceEpoch}_${widget.patientId}.$fileExtension';
-                                final storagePath = 'media/$fileName';
+                                final bytes = await File(selectedFile!.path!).readAsBytes();
+                                final base64String = base64Encode(bytes);
+                                final fileName = selectedFile!.name;
                                 
-                                await _supabase.storage.from('patient_documents').upload(
-                                  storagePath,
-                                  File(selectedFile!.path!),
-                                );
-                                
-                                final fileUrl = _supabase.storage.from('patient_documents').getPublicUrl(storagePath);
-                                
-                                final response = await _supabase.from('patient_media_files').insert({
+                                final response = await ApiService.post('/patient_media_files', {
                                   'patient_id': widget.patientId,
-                                  'uploader_id': _supabase.auth.currentUser?.id,
-                                  'file_type': fileType,
-                                  'title': titleCtrl.text,
-                                  'file_url': fileUrl,
-                                  'created_at': DateTime.now().toIso8601String(),
-                                }).select();
+                                  'uploader_id': _currentUser?['id'],
+                                  'media_type': fileType,
+                                  'file_name': titleCtrl.text,
+                                  'file_url': base64String,
+                                }, includeAuth: true);
                                 
-                                if (response.isEmpty) {
+                                if (response == null) {
                                   throw Exception('Database rejected the insert. Row Level Security might be blocking it.');
                                 }
                                 

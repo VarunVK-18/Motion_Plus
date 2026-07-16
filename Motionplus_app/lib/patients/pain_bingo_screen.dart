@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import '../auth/auth_service.dart';
 
 class PainBingoScreen extends StatefulWidget {
@@ -40,15 +40,15 @@ class _PainBingoScreenState extends State<PainBingoScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final supabase = Supabase.instance.client;
-      final userId = supabase.auth.currentUser?.id;
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
+      final userId = user != null ? user['id'] : null;
       
       if (userId != null) {
-        await supabase.from('pain_bingo_assessments').insert({
+        await ApiService.post('/pain_bingo_assessments', {
           'patient_id': userId,
           'pain_score': _selectedParts.length * 2, // arbitrary logic for gamification
           'selected_areas': _selectedParts.toList(),
-        });
+        }, includeAuth: true);
         
         if (mounted) {
           showDialog(

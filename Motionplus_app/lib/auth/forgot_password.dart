@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'auth_service.dart';
 import '../selection_page.dart';
 
@@ -17,7 +17,7 @@ class ForgotPasswordScreen extends StatefulWidget {
 
 class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
-  final _supabase = Supabase.instance.client;
+  
   bool _isLoading = false;
 
   Future<void> _sendOtp() async {
@@ -32,9 +32,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _supabase.auth.resetPasswordForEmail(
-        email,
-      );
+      await ApiService.post('/auth/reset-password', {'email': email}, includeAuth: false);
 
       if (mounted) {
         Navigator.push(
@@ -44,10 +42,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           ),
         );
       }
-    } on AuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(e.message), backgroundColor: Colors.red),
+          SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -180,7 +178,7 @@ class VerifyOtpScreen extends StatefulWidget {
 
 class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
   final _otpController = TextEditingController();
-  final _supabase = Supabase.instance.client;
+  
   bool _isLoading = false;
   
   Timer? _timer;
@@ -212,12 +210,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
     if (_secondsLeft > 0) return;
     
     try {
-      await _supabase.auth.resetPasswordForEmail(
-        widget.email,
-      );
+      await ApiService.post('/auth/reset-password', {'email': widget.email}, includeAuth: false);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('OTP sent again successfully!'), backgroundColor: Colors.green),
+          const SnackBar(content: Text('OTP sent again successfully! (mocked: 123456)'), backgroundColor: Colors.green),
         );
         _startTimer();
       }
@@ -243,11 +239,11 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
 
     try {
       AuthService.isPasswordRecovery = true;
-      await _supabase.auth.verifyOTP(
-        email: widget.email,
-        token: otp,
-        type: OtpType.recovery,
-      );
+      final response = await ApiService.post('/auth/verify-otp', {
+        'email': widget.email,
+        'token': otp,
+      }, includeAuth: false);
+      await ApiService.saveToken(response['token']);
 
       if (mounted) {
         // Success: push to reset password screen
@@ -256,10 +252,10 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
           MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
         );
       }
-    } on AuthException catch (e) {
+    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Invalid or expired OTP: ${e.message}'), backgroundColor: Colors.red),
+          SnackBar(content: Text('Invalid or expired OTP: $e'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {
@@ -404,7 +400,7 @@ class ResetPasswordScreen extends StatefulWidget {
 class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   final _newPasswordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
-  final _supabase = Supabase.instance.client;
+  
   bool _isLoading = false;
 
   Future<void> _updatePassword() async {
@@ -428,12 +424,10 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _supabase.auth.updateUser(
-        UserAttributes(password: newPass),
-      );
+      await ApiService.put('/auth/update-password', {'password': newPass}, includeAuth: true);
       
-      // Sign out to force the user to log in with their new password
-      await _supabase.auth.signOut();
+      // Clear token to force the user to log in with their new password
+      await ApiService.clearToken();
       
       AuthService.isPasswordRecovery = false;
 
@@ -446,12 +440,6 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
           context,
           MaterialPageRoute(builder: (context) => const SelectionPage()),
           (route) => false,
-        );
-      }
-    } on AuthException catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update password: ${e.message}'), backgroundColor: Colors.red),
         );
       }
     } catch (e) {

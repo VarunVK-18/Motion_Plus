@@ -1,7 +1,7 @@
 import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -37,7 +37,7 @@ class PatientDashboard extends StatefulWidget {
 }
 
 class _PatientDashboardState extends State<PatientDashboard> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
   final bool _isExpanded = false;
   final Set<String> _notifiedSessions = {};
   int _selectedIndex = 0;
@@ -60,7 +60,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
   int _stepGoal = 10000;
   int _lastBpm = 72;
   int _pendingReminders = 3;
-  late Stream<List<Map<String, dynamic>>> _sessionsStream;
+  Future<dynamic>? _sessionsStream;
   List<String> _selectedCards = [
     'Steps',
     'Heart Rate',
@@ -70,6 +70,14 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
   @override
   void initState() {
+    ApiService.get('/profiles/me', includeAuth: true).then((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user as Map<String, dynamic>;
+          _initSessionsStream();
+        });
+      }
+    });
     super.initState();
     _checkIntakeForm();
     _loadVitals();
@@ -78,14 +86,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
   }
 
   Future<void> _checkIntakeForm() async {
-    final user = _supabase.auth.currentUser;
+    final user = _currentUser;
     if (user == null) return;
     try {
-      final response = await _supabase
-          .from('patient_intake_forms')
-          .select('id')
-          .eq('patient_id', user.id)
-          .maybeSingle();
+      final response = await ApiService.get('/patient_intake_forms?patient_id=${user['id']}', includeAuth: true);
 
       if (response == null && mounted) {
         // No intake form found, redirect to Intake Form Screen
@@ -108,13 +112,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
 
   void _initSessionsStream() {
-    final user = _supabase.auth.currentUser;
-    final patientId = user?.id ?? '';
-    _sessionsStream = _supabase
-        .from('sessions')
-        .stream(primaryKey: ['id'])
-        .eq('patient_id', patientId)
-        .order('created_at');
+    final user = _currentUser;
+    final patientId = user?['id'] ?? '';
+    _sessionsStream = ApiService.get('/sessions?patient_id=$patientId', includeAuth: true).then((res) => res as List<dynamic>);
   }
 
   Future<void> _loadVitals() async {
@@ -286,9 +286,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
   @override
   Widget build(BuildContext context) {
-    final user = _supabase.auth.currentUser;
-    final patientId = user?.id ?? '';
-    final email = user?.email ?? 'User';
+    final user = _currentUser;
+    final patientId = user?['id'] ?? '';
+    final email = user?['email'] ?? 'User';
 
     return ConnectivityBanner(
       child: AnnotatedRegion<SystemUiOverlayStyle>(
@@ -300,8 +300,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
             children: [
               _buildHeader(context, email),
               Expanded(
-                child: StreamBuilder<List<Map<String, dynamic>>>(
-                  stream: _sessionsStream,
+                child: FutureBuilder<dynamic>(
+                  future: _sessionsStream,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting &&
                         !snapshot.hasData) {
@@ -324,11 +324,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                     .inMinutes <
                                 5) {
                           Future.microtask(() async {
-                            final tSnap = await _supabase
-                                .from('profiles')
-                                .select('full_name')
-                                .eq('id', s['therapist_id'])
-                                .single();
+                            final tSnap = await ApiService.get('/profiles/${s['therapist_id']}', includeAuth: true);
                             final tName = tSnap['full_name'];
 
                             NotificationService.showNotification(
@@ -1391,11 +1387,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             ),
                             const SizedBox(height: 2),
                             FutureBuilder(
-                              future: _supabase
-                                  .from('profiles')
-                                  .select('full_name')
-                                  .eq('id', s['therapist_id'] ?? '')
-                                  .single(),
+                              future: ApiService.get('/profiles/${s['therapist_id']}', includeAuth: true),
                               builder: (context, snapshot) {
                                 final name = snapshot.hasData
                                     ? snapshot.data!['full_name']
@@ -1757,10 +1749,7 @@ Feedback: ${feedbackController.text}
 """;
 
                           try {
-                            await _supabase
-                                .from('sessions')
-                                .update({'patient_feedback': formattedFeedback})
-                                .eq('id', sessionId);
+                            await ApiService.put('/sessions/' + sessionId.toString(), {'patient_feedback': formattedFeedback}, includeAuth: true);
                             if (context.mounted) {
                               Navigator.pop(context, true);
                               // Force a rebuild of the parent to show updated status immediately
@@ -2697,11 +2686,8 @@ Feedback: ${feedbackController.text}
 
                       // Location Picker
                       _modalLabel('PREFERRED LOCATION'),
-                      FutureBuilder<List<Map<String, dynamic>>>(
-                        future: _supabase
-                            .from('clinics')
-                            .select()
-                            .order('name'),
+                      FutureBuilder<dynamic>(
+                        future: ApiService.get('/clinics', includeAuth: true),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
@@ -2874,8 +2860,8 @@ Feedback: ${feedbackController.text}
                       : () async {
                           setModalState(() => isSubmitting = true);
                           try {
-                            final userId = _supabase.auth.currentUser!.id;
-                            await _supabase.from('sessions').insert({
+                            final userId = _currentUser!['id'];
+                            await ApiService.post('/sessions', {
                               'patient_id': userId,
                               'clinic_id': selectedLocationId,
                               'specialization_required': selectedSpec,
@@ -2885,13 +2871,13 @@ Feedback: ${feedbackController.text}
                               'scheduled_time': selectedTime.format(context),
                               'fee_charged': 500, // Default fee
                               'location': selectedLocationName ?? 'TBD',
-                            });
+                            }, includeAuth: true);
 
                             // Assign patient to this clinic
                             if (selectedLocationId != null) {
-                              await _supabase.from('profiles').update({
+                              await ApiService.put('/profiles/' + userId.toString(), {
                                 'clinic_id': selectedLocationId,
-                              }).eq('id', userId);
+                              }, includeAuth: true);
                             }
 
                             if (mounted) {
@@ -2972,8 +2958,8 @@ Feedback: ${feedbackController.text}
   );
 
   Widget _buildAchievementsSection(String patientId) {
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _supabase.from('patient_achievements').stream(primaryKey: ['id']).eq('patient_id', patientId).order('unlocked_at'),
+    return FutureBuilder<dynamic>(
+      future: ApiService.get('/patient_achievements?patient_id=$patientId', includeAuth: true),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
@@ -3107,7 +3093,7 @@ class _PatientSessionCard extends StatefulWidget {
 class _PatientSessionCardState extends State<_PatientSessionCard> {
   Timer? _timer;
   String _timeLeft = "00:00:00";
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
   bool _isExpanded = false;
 
   @override
@@ -3265,17 +3251,13 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
     final bool isInProgress = session['status'] == 'in_progress';
 
     return FutureBuilder(
-      future: _supabase
-          .from('profiles')
-          .select('full_name, phone, clinical_status')
-          .eq('id', therapistId)
-          .single(),
+      future: ApiService.get('/profiles/' + therapistId.toString(), includeAuth: true),
       builder: (context, snapshot) {
         final therapistName = snapshot.hasData
             ? snapshot.data!['full_name']
             : 'Assigning...';
         final userEmail =
-            _supabase.auth.currentUser?.email?.split('@')[0].toUpperCase() ??
+            _currentUser?['email']?.split('@')[0].toUpperCase() ??
             'YOU';
 
         return GestureDetector(

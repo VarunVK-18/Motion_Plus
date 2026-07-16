@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
 
@@ -33,21 +33,11 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
   }
 
   Future<Map<String, dynamic>> _loadData() async {
-    final client = Supabase.instance.client;
-    
     // Fetch profile
-    final profile = await client
-        .from('profiles')
-        .select('*, clinic:clinics!profiles_clinic_id_fkey(name)')
-        .eq('id', widget.therapistId)
-        .maybeSingle();
+    final profile = await ApiService.get('/profiles/${widget.therapistId}', includeAuth: true);
 
     // Fetch sessions
-    final sessions = await client
-        .from('sessions')
-        .select('*, patient:profiles!sessions_patient_id_fkey(full_name, phone)')
-        .eq('therapist_id', widget.therapistId)
-        .order('created_at', ascending: false);
+    final sessions = await ApiService.get('/sessions?therapist_id=${widget.therapistId}&_sort=created_at:desc', includeAuth: true) as List;
 
     return {
       'profile': profile,
@@ -239,7 +229,7 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
           
           const SizedBox(height: 24),
           _buildSectionHeader('CLINIC DETAILS'),
-          _detailRow('Branch', profile['clinic']?['name']?.toString() ?? 'Unassigned'),
+          _detailRow('Branch', profile['clinic_id']?['name']?.toString() ?? 'Unassigned'),
           _detailRow('Registered On', _formatDate(profile['created_at']?.toString())),
         ],
       ),
@@ -366,8 +356,8 @@ class _TherapistDetailsPageState extends State<TherapistDetailsPage> {
     if (status == 'assigned') color = TherapistDetailsPage.primaryBlue;
     if (status == 'ongoing') color = Colors.orange;
 
-    final patientName = session['patient']?['full_name'] ?? 'Unknown Patient';
-    final patientPhone = session['patient']?['phone'] ?? 'No Phone';
+    final patientName = session['patient_id']?['full_name'] ?? 'Unknown Patient';
+    final patientPhone = session['patient_id']?['phone'] ?? 'No Phone';
     final date = _formatDate(session['created_at']);
 
     return Container(

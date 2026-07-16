@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -13,7 +13,7 @@ class ManageTherapistsPage extends StatefulWidget {
 }
 
 class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? currentUser;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nameController = TextEditingController();
@@ -34,21 +34,17 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
   }
 
   Future<void> _fetchAdminClinicId() async {
-    final user = _supabase.auth.currentUser;
-    if (user != null) {
-      try {
-        final data = await _supabase.from('profiles').select('clinic_id').eq('id', user.id).single();
-        if (mounted) {
-          setState(() {
-            _adminClinicId = data['clinic_id'];
-            _isLoading = false;
-          });
-        }
-      } catch (e) {
-        debugPrint('Error fetching admin clinic: $e');
-        if (mounted) setState(() => _isLoading = false);
+    try {
+      final user = await ApiService.get('/auth/me', includeAuth: true);
+      if (mounted) {
+        setState(() {
+          currentUser = user;
+          _adminClinicId = user['clinic_id'];
+          _isLoading = false;
+        });
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error fetching admin clinic: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -106,22 +102,22 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
     }
 
     try {
-      final response = await _supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final names = _nameController.text.trim().split(' ');
+      final firstName = names[0];
+      final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+      
+      final response = await ApiService.post('/auth/register', {
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'role': 'therapist_assistant',
+        'specialization': _selectedSpecialization.value!.toLowerCase(),
+        'clinic_id': _adminClinicId,
+      });
 
-      if (response.user != null) {
-        await _supabase.from('profiles').upsert({
-          'id': response.user!.id,
-          'full_name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'email': _emailController.text.trim(),
-          'role': 'therapist_assistant',
-          'specialization': _selectedSpecialization.value!.toLowerCase(),
-          'clinic_id': _adminClinicId,
-        });
-
+      if (response != null) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
@@ -206,13 +202,10 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
 
   Future<void> _updateTherapist(String id) async {
     try {
-      await _supabase
-          .from('profiles')
-          .update({
-            'full_name': _nameController.text.trim(),
-            'phone': _phoneController.text.trim(),
-          })
-          .eq('id', id);
+      await ApiService.put('/profiles/$id', {
+        'full_name': _nameController.text.trim(),
+        'phone': _phoneController.text.trim(),
+      }, includeAuth: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -237,8 +230,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
 
   Future<void> _deleteTherapist(String id) async {
     try {
-      await _supabase.from('sessions').delete().eq('therapist_id', id);
-      await _supabase.from('profiles').delete().eq('id', id);
+      await ApiService.delete('/profiles/$id', includeAuth: true);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -407,11 +399,8 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
         ),
       );
     }
-    return StreamBuilder(
-      stream: _supabase
-          .from('profiles')
-          .stream(primaryKey: ['id'])
-          .eq('clinic_id', _adminClinicId as dynamic),
+    return FutureBuilder(
+      future: ApiService.get('/profiles?role=therapist_assistant&clinic_id=$_adminClinicId', includeAuth: true),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
@@ -419,7 +408,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
           );
         }
 
-        var staff = snapshot.data!
+        var staff = (snapshot.data as List<dynamic>)
             .where((s) => s['clinic_id'] == _adminClinicId && s['role'] == 'therapist_assistant')
             .toList();
         if (_filterCategory != 'All') {

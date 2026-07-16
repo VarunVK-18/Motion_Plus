@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'patient_details.dart';
 
@@ -28,22 +28,18 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
   }
 
   Future<void> _fetchAdminClinicId() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-    if (user != null) {
-      try {
-        final data = await supabase.from('profiles').select('clinic_id').eq('id', user.id).single();
+    try {
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
+      if (user != null) {
         if (mounted) {
           setState(() {
-            _adminClinicId = data['clinic_id'];
+            _adminClinicId = user['clinic_id'];
             _isLoading = false;
           });
         }
-      } catch (e) {
-        debugPrint('Error fetching admin clinic: $e');
-        if (mounted) setState(() => _isLoading = false);
       }
-    } else {
+    } catch (e) {
+      debugPrint('Error fetching admin clinic: $e');
       if (mounted) setState(() => _isLoading = false);
     }
   }
@@ -56,7 +52,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final supabase = Supabase.instance.client;
+    
 
     return Column(
       children: [
@@ -112,11 +108,8 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                     style: GoogleFonts.outfit(color: slate, fontSize: 16),
                   ),
                 )
-              : StreamBuilder(
-            stream: supabase
-                .from('profiles')
-                .stream(primaryKey: ['id'])
-                .eq('clinic_id', _adminClinicId),
+              : FutureBuilder(
+            future: ApiService.get('/profiles?clinic_id=$_adminClinicId&role=patient', includeAuth: true),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(
@@ -243,7 +236,6 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                           if (val == 'delete') {
                             _showDeletePatientDialog(
                               context,
-                              supabase,
                               patient['id'],
                               name,
                             );
@@ -305,7 +297,6 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
 
   void _showDeletePatientDialog(
     BuildContext context,
-    SupabaseClient supabase,
     String patientId,
     String name,
   ) {
@@ -348,11 +339,8 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
             ),
             onPressed: () async {
               try {
-                await supabase
-                    .from('sessions')
-                    .delete()
-                    .eq('patient_id', patientId);
-                await supabase.from('profiles').delete().eq('id', patientId);
+                await ApiService.delete('/sessions?patient_id=$patientId', includeAuth: true);
+                await ApiService.delete('/profiles/$patientId', includeAuth: true);
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -360,6 +348,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                       content: Text('Records Removed Successfully'),
                     ),
                   );
+                  setState(() {});
                 }
               } catch (e) {
                 if (context.mounted) {

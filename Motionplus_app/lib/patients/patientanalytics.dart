@@ -3,7 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 
@@ -17,7 +17,7 @@ class PatientAnalyticsPage extends StatefulWidget {
 
 class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
   String _selectedTab = 'Week'; // 'Day', 'Week', 'Month'
-  final _supabase = Supabase.instance.client;
+  Map<String, dynamic>? _currentUser;
 
   // Real Vitals Data
   int _todaySteps = 0;
@@ -28,6 +28,13 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
 
   @override
   void initState() {
+    ApiService.get('/profiles/me', includeAuth: true).then((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user as Map<String, dynamic>;
+        });
+      }
+    });
     super.initState();
     _loadVitals();
   }
@@ -54,26 +61,18 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final targetId = widget.patientId ?? _supabase.auth.currentUser?.id;
+    final targetId = widget.patientId ?? _currentUser?['id'];
     if (targetId == null) return const Center(child: Text('User not found'));
 
-    return StreamBuilder<List<Map<String, dynamic>>>(
-      stream: _supabase
-          .from('sessions')
-          .stream(primaryKey: ['id'])
-          .eq('patient_id', targetId)
-          .order('scheduled_time'),
+    return FutureBuilder<dynamic>(
+      future: ApiService.get('/sessions?patient_id=$targetId', includeAuth: true),
       builder: (context, sessionSnapshot) {
         if (sessionSnapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
 
-        return StreamBuilder<List<Map<String, dynamic>>>(
-          stream: _supabase
-              .from('morning_checkins')
-              .stream(primaryKey: ['id'])
-              .eq('patient_id', targetId)
-              .order('created_at'),
+        return FutureBuilder<dynamic>(
+          future: ApiService.get('/morning_checkins?patient_id=$targetId', includeAuth: true),
           builder: (context, checkinSnapshot) {
             if (checkinSnapshot.connectionState == ConnectionState.waiting) {
               return const Center(child: CircularProgressIndicator());

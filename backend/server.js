@@ -5,6 +5,20 @@ const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
 const authRouter = require('./routers/authRouter');
+const clinicRouter = require('./routers/clinicRouter');
+const settingRouter = require('./routers/settingRouter');
+const profileRouter = require('./routers/profileRouter');
+const prescribedExerciseRouter = require('./routers/prescribedExerciseRouter');
+const smartAlertRouter = require('./routers/smartAlertRouter');
+const morning_checkinsRouter = require('./routers/morning_checkinsRouter');
+const caregiver_observation_logsRouter = require('./routers/caregiver_observation_logsRouter');
+const pain_bingo_assessmentsRouter = require('./routers/pain_bingo_assessmentsRouter');
+const patient_intake_formsRouter = require('./routers/patient_intake_formsRouter');
+const patient_achievementsRouter = require('./routers/patient_achievementsRouter');
+const patient_documentsRouter = require('./routers/patient_documentsRouter');
+const patient_media_filesRouter = require('./routers/patient_media_filesRouter');
+const accessRequestRouter = require('./routers/accessRequestRouter');
+const sessionRouter = require('./routers/sessionRouter');
 
 // Connect to MongoDB
 connectDB();
@@ -17,6 +31,20 @@ app.use(express.json());
 
 // Routes
 app.use('/api/auth', authRouter);
+app.use('/api/clinics', clinicRouter);
+app.use('/api/settings', settingRouter);
+app.use('/api/profiles', profileRouter);
+app.use('/api/prescribed_exercises', prescribedExerciseRouter);
+app.use('/api/smart_alerts', smartAlertRouter);
+app.use('/api/morning_checkins', morning_checkinsRouter);
+app.use('/api/caregiver_observation_logs', caregiver_observation_logsRouter);
+app.use('/api/pain_bingo_assessments', pain_bingo_assessmentsRouter);
+app.use('/api/patient_intake_forms', patient_intake_formsRouter);
+app.use('/api/patient_achievements', patient_achievementsRouter);
+app.use('/api/patient_documents', patient_documentsRouter);
+app.use('/api/patient_media_files', patient_media_filesRouter);
+app.use('/api/access-requests', accessRequestRouter);
+app.use('/api/sessions', sessionRouter);
 
 const server = http.createServer(app);
 const io = new Server(server, {

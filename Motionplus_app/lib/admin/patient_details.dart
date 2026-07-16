@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pdf_report_generator.dart';
@@ -37,18 +37,10 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   }
 
   Future<Map<String, dynamic>> _loadData() async {
-    final client = Supabase.instance.client;
-    final sessions = await client
-        .from('sessions')
-        .select('*, therapist:profiles!sessions_therapist_id_fkey(full_name), patient:profiles!sessions_patient_id_fkey(full_name, phone)')
-        .eq('patient_id', widget.patientId)
-        .order('created_at', ascending: false);
+    final sessions = await ApiService.get('/sessions?patient_id=${widget.patientId}&_sort=created_at:desc', includeAuth: true) as List;
 
-    final intakeForm = await client
-        .from('patient_intake_forms')
-        .select('*')
-        .eq('patient_id', widget.patientId)
-        .maybeSingle();
+    final intakeForms = await ApiService.get('/patient_intake_forms?patient_id=${widget.patientId}', includeAuth: true) as List;
+    final intakeForm = intakeForms.isNotEmpty ? intakeForms.first : null;
 
     return {
       'sessions': sessions,
@@ -618,11 +610,11 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   Widget _buildSessionCard(BuildContext context, Map<String, dynamic> session) {
     final status = session['status'] ?? 'pending';
     final date = DateTime.parse(session['created_at']).toLocal();
-    final therapistName = (session['therapist'] != null)
-        ? session['therapist']['full_name']
+    final therapistName = (session['therapist_id'] != null)
+        ? session['therapist_id']['full_name']
         : 'System Assigned';
-    final patientPhone = (session['patient'] != null)
-        ? session['patient']['phone']
+    final patientPhone = (session['patient_id'] != null)
+        ? session['patient_id']['phone']
         : 'N/A';
     final spec = session['specialization_required'].toString().toUpperCase();
 
@@ -1058,12 +1050,8 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
   }
 
   Widget _buildMorningCheckInsTab() {
-    return FutureBuilder<List<dynamic>>(
-      future: Supabase.instance.client
-          .from('morning_checkins')
-          .select()
-          .eq('patient_id', widget.patientId)
-          .order('created_at', ascending: false),
+    return FutureBuilder(
+      future: ApiService.get('/morning_checkins?patient_id=${widget.patientId}&_sort=created_at:desc', includeAuth: true),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator(color: PatientDetailsPage.primaryBlue));
@@ -1071,7 +1059,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         if (snapshot.hasError) {
           return Center(child: Text('Error loading check-ins', style: GoogleFonts.outfit()));
         }
-        final checkins = snapshot.data ?? [];
+        final checkins = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
         if (checkins.isEmpty) {
           return Center(
             child: Text('No Morning Check-Ins recorded yet.',

@@ -1,51 +1,56 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import '../admin/admin_dashboard.dart';
 import '../superadmin/super_admin_dashboard.dart';
 import '../therapist_assistant/therapist_dashboard.dart';
 import '../patients/patient_dashboard.dart';
+import '../services/api_service.dart';
+import 'dart:convert';
 
 class AuthService {
-  static final client = Supabase.instance.client;
   static bool isPasswordRecovery = false;
   static bool isSigningUp = false;
+
+  static Future<Map<String, dynamic>?> getCurrentUser() async {
+    try {
+      final data = await ApiService.get('/auth/me', includeAuth: true);
+      return data;
+    } catch (e) {
+      return null;
+    }
+  }
+
+  static Future<String?> getCurrentUserId() async {
+    final user = await getCurrentUser();
+    return user?['_id'] ?? user?['id'];
+  }
+
+  static Future<void> signOut(BuildContext context) async {
+    await ApiService.clearToken();
+    if (context.mounted) {
+      Navigator.of(context).pushNamedAndRemoveUntil('/selection', (route) => false);
+    }
+  }
 
   // Function to handle redirection based on role
   static Future<void> handleRedirection(BuildContext context,
       {String? portal}) async {
-    final user = client.auth.currentUser;
-    if (user == null) return;
+    final user = await getCurrentUser();
+    if (user == null) {
+      if (context.mounted) await signOut(context);
+      return;
+    }
 
     try {
-      // Fetch the role from the profiles table
-      final data = await client
-          .from('profiles')
-          .select('role')
-          .eq('id', user.id)
-          .maybeSingle();
-
-      if (data == null) {
-        // Auto-create a missing profile for older test accounts
-        await client.from('profiles').insert({
-          'id': user.id,
-          'role': 'patient',
-          'first_name': 'Unknown',
-          'last_name': 'User',
-          'full_name': 'Unknown User',
-          'email': user.email ?? '',
-        });
-      }
-
-      final String role = data?['role'] ?? 'patient';
+      final String role = user['role'] ?? 'patient';
 
       // Validation logic
       if (portal == 'patient' && role != 'patient') {
-        await client.auth.signOut();
+        await ApiService.clearToken();
         throw 'Please use the Medical Staff Portal for Admin/Therapist access.';
       }
 
       if (portal == 'staff' && role == 'patient') {
-        await client.auth.signOut();
+        await ApiService.clearToken();
         throw 'This portal is for Medical Staff only. Please use the Patient Portal.';
       }
 

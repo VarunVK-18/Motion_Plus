@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:ui'; // Required for ImageFilter
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../selection_page.dart';
@@ -17,7 +17,7 @@ class AdminDashboard extends StatefulWidget {
 }
 
 class _AdminDashboardState extends State<AdminDashboard> {
-  final supabase = Supabase.instance.client;
+
   int _currentIndex = 0;
   late PageController _pageController;
 
@@ -122,7 +122,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
     );
 
     if (result == true) {
-      await supabase.auth.signOut();
+      await ApiService.clearToken();
       if (mounted) {
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(builder: (context) => const SelectionPage()),

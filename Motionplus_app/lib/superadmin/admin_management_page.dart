@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
+import '../services/api_service.dart';
 
 class AdminManagementPage extends StatefulWidget {
   const AdminManagementPage({super.key});
@@ -12,11 +12,11 @@ class AdminManagementPage extends StatefulWidget {
 }
 
 class _AdminManagementPageState extends State<AdminManagementPage> {
-  final _supabase = Supabase.instance.client;
   bool _isLoading = false;
   String _searchQuery = '';
   bool _obscurePassword = true;
 
+  late Future<List<dynamic>> _adminsFuture;
 
   // Form Controllers
   final _nameController = TextEditingController();
@@ -26,24 +26,32 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
   final _confirmPasswordController = TextEditingController();
 
   String? _selectedClinicId;
-  List<Map<String, dynamic>> _clinics = [];
+  List<dynamic> _clinics = [];
 
   @override
   void initState() {
     super.initState();
     _fetchClinics();
+    _loadAdmins();
+  }
+
+  void _loadAdmins() {
+    setState(() {
+      _adminsFuture = ApiService.get('/profiles?role=admin', includeAuth: true)
+          .then((data) => data as List<dynamic>);
+    });
   }
 
   Future<void> _fetchClinics() async {
     try {
-      final response = await _supabase.from('clinics').select('id, name');
+      final response = await ApiService.get('/clinics', includeAuth: true);
       if (mounted) {
         setState(() {
-          _clinics = List<Map<String, dynamic>>.from(response);
+          _clinics = response;
         });
       }
     } catch (e) {
-      debugPrint('Error fetching clinics: $e');
+      debugPrint('Error fetching clinics: \$e');
     }
   }
 
@@ -196,7 +204,6 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
   }
 
   Future<void> _registerAdmin(StateSetter setModalState) async {
-    // 1. Check for empty fields
     if (_nameController.text.trim().isEmpty ||
         _emailController.text.trim().isEmpty ||
         _phoneController.text.trim().isEmpty ||
@@ -207,14 +214,12 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
       return;
     }
 
-    // 2. Validate Email Format
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$');
     if (!emailRegex.hasMatch(_emailController.text.trim())) {
       _showError('Please enter a valid email address');
       return;
     }
 
-    // 3. Validate Passwords
     if (_passwordController.text != _confirmPasswordController.text) {
       _showError('Passwords do not match');
       return;
@@ -227,38 +232,32 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
     setModalState(() => _isLoading = true);
 
     try {
-      // 1. Create the user in Supabase Auth
-      final AuthResponse res = await _supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-        data: {
-          'full_name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'role': 'admin',
-        },
-      );
+      final nameParts = _nameController.text.trim().split(' ');
+      final firstName = nameParts.first;
+      final lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : 'Admin';
 
-      if (res.user != null) {
-        // 2. Store the admin profile in the database
-        await _supabase.from('profiles').upsert({
-          'id': res.user!.id,
-          'full_name': _nameController.text.trim(),
-          'phone': _phoneController.text.trim(),
-          'role': 'admin',
-          'email': _emailController.text.trim(),
-          'clinic_id': _selectedClinicId,
-        });
+      await ApiService.post('/auth/register', {
+        'first_name': firstName,
+        'last_name': lastName,
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+        'phone': _phoneController.text.trim(),
+        'role': 'admin',
+        'clinic_id': _selectedClinicId,
+      }, includeAuth: false);
 
-        if (mounted) {
-          Navigator.pop(context); // Close dialog
-          _showSuccess('Admin registered successfully!');
-          _clearControllers();
-        }
+      if (mounted) {
+        Navigator.pop(context); // Close dialog
+        _showSuccess('Admin registered successfully!');
+        _clearControllers();
+        _loadAdmins();
       }
     } catch (e) {
       _showError(e.toString());
     } finally {
-      setModalState(() => _isLoading = false);
+      if (mounted) {
+        setModalState(() => _isLoading = false);
+      }
     }
   }
 
@@ -521,11 +520,8 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
             _buildSearchBox(),
             const SizedBox(height: 16),
             Expanded(
-              child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _supabase
-                    .from('profiles')
-                    .stream(primaryKey: ['id'])
-                    .eq('role', 'admin'),
+              child: FutureBuilder<List<dynamic>>(
+                future: _adminsFuture,
                 builder: (context, snapshot) {
                   if (snapshot.hasError) {
                     return Center(
@@ -539,8 +535,9 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                             style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.redAccent),
                           ),
                           Text(
-                            'Please check your network',
+                            'Please check your network: \${snapshot.error}',
                             style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                            textAlign: TextAlign.center,
                           ),
                         ],
                       ),
@@ -656,6 +653,10 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
   }
 
   Widget _buildAdminCard(Map<String, dynamic> admin) {
+    // We populated clinic_id in backend, so it might be an object instead of ID
+    final clinicObj = admin['clinic_id'];
+    final clinicName = clinicObj != null && clinicObj is Map ? clinicObj['name'] : 'Unassigned Clinic';
+    
     return Card(
       margin: const EdgeInsets.only(bottom: 12),
       shape: RoundedRectangleBorder(
@@ -683,20 +684,12 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           admin['full_name'] ?? admin['email'] ?? 'Unnamed Admin',
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
-        subtitle: FutureBuilder(
-          future: admin['clinic_id'] != null 
-              ? _supabase.from('clinics').select('name').eq('id', admin['clinic_id']).maybeSingle() 
-              : Future.value(null),
-          builder: (context, snapshot) {
-            final clinicName = (snapshot.data as dynamic)?['name'] ?? 'Unassigned Clinic';
-            return Text(
-              'Admin • ${admin['phone'] ?? "No Phone"}\n$clinicName',
-              style: GoogleFonts.outfit(
-                fontSize: 12,
-                color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
-              ),
-            );
-          }
+        subtitle: Text(
+          "Admin • \${admin['phone'] ?? 'No Phone'}\n\$clinicName",
+          style: GoogleFonts.outfit(
+            fontSize: 12,
+            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          ),
         ),
         trailing: IconButton(
           icon: const HugeIcon(
@@ -742,7 +735,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           ],
         ),
         content: Text(
-          'This will permanently delete ${admin['full_name'] ?? 'this account'} and revoke all system access. This action cannot be undone.',
+          "This will permanently delete \${admin['full_name'] ?? 'this account'} and revoke all system access. This action cannot be undone.",
           textAlign: TextAlign.center,
           style: GoogleFonts.outfit(
             fontSize: 14,
@@ -793,25 +786,15 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
       try {
         setState(() => _isLoading = true);
 
-        // 1. Delete from profiles table
-        await _supabase.from('profiles').delete().eq('id', admin['id']);
-
-        // 2. Attempt to trigger permanent auth deletion (if RPC exists)
-        try {
-          await _supabase.rpc(
-            'delete_user_permanently',
-            params: {'target_user_id': admin['id']},
-          );
-        } catch (e) {
-          debugPrint('Auth sync deletion skipped: $e');
-        }
+        await ApiService.delete("/profiles/${admin['id']}", includeAuth: true);
 
         if (mounted) {
           _showSuccess('Admin deleted permanently');
+          _loadAdmins();
         }
       } catch (e) {
         if (mounted) {
-          _showError('Error deleting admin: $e');
+          _showError('Error deleting admin: \$e');
         }
       } finally {
         if (mounted) {

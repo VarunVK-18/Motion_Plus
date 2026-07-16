@@ -1,13 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class FirstAidScreen extends StatelessWidget {
   const FirstAidScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final supabase = Supabase.instance.client;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8F5),
@@ -15,8 +14,8 @@ class FirstAidScreen extends StatelessWidget {
         title: const Text('First Aid & Education'),
         backgroundColor: Colors.white,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: supabase.from('first_aid_conditions').select(),
+      body: FutureBuilder<dynamic>(
+        future: ApiService.get('/first_aid_conditions', includeAuth: true),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
@@ -25,7 +24,7 @@ class FirstAidScreen extends StatelessWidget {
             return Center(child: Text('Error: ${snapshot.error}'));
           }
 
-          final conditions = snapshot.data ?? [];
+          final conditions = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
           if (conditions.isEmpty) {
             return const Center(child: Text('No first aid topics available.'));
           }

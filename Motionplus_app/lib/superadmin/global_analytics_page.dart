@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:fl_chart/fl_chart.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 
 class GlobalAnalyticsPage extends StatefulWidget {
@@ -14,7 +14,7 @@ class GlobalAnalyticsPage extends StatefulWidget {
 
 class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
     with SingleTickerProviderStateMixin {
-  final _supabase = Supabase.instance.client;
+  
   late TabController _tabController;
 
   // Filter State
@@ -150,21 +150,8 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           ),
         ),
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _supabase.from('sessions').stream(primaryKey: ['id']).asyncMap((
-          _,
-        ) async {
-          try {
-            final data = await _supabase
-                .from('sessions')
-                .select(
-                  '*, therapist:profiles!sessions_therapist_id_fkey(full_name), patient:profiles!sessions_patient_id_fkey(full_name, phone)',
-                );
-            return List<Map<String, dynamic>>.from(data);
-          } catch (e) {
-            return <Map<String, dynamic>>[];
-          }
-        }),
+      body: FutureBuilder(
+        future: ApiService.get('/sessions', includeAuth: true),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(
@@ -202,7 +189,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
             return const Center(child: CircularProgressIndicator());
           }
 
-          final allSessions = snapshot.data ?? [];
+          final allSessions = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
 
           final startDate = _getStartDate();
           final endDate = _getEndDate();

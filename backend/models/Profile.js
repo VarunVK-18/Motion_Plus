@@ -6,7 +6,7 @@ const profileSchema = new mongoose.Schema({
     last_name: { type: String, required: true },
     full_name: { type: String, required: true },
     phone: { type: String },
-    role: { type: String, enum: ['patient', 'therapist', 'admin', 'superadmin'], default: 'patient' },
+    role: { type: String, enum: ['patient', 'therapist', 'therapist_assistant', 'admin', 'superadmin'], default: 'patient' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     clinic_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' },

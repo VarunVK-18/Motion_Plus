@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:hugeicons/hugeicons.dart';
 
 enum ExerciseCategory { fullBody, therapist, stretching }
@@ -82,45 +82,42 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
   ];
 
   List<Exercise> _exercises = [];
-  final _supabase = Supabase.instance.client;
-  StreamSubscription? _subscription;
+  Map<String, dynamic>? _currentUser;
+  Timer? _pollingTimer;
 
-  void _setupExercises() {
+  Future<void> _setupExercises() async {
     _exercises = [];
 
-    // Fetch and listen to therapist assignments
-    final patientId = _supabase.auth.currentUser?.id;
+    // Fetch therapist assignments
+    final patientId = _currentUser?['id'];
     if (patientId != null) {
-      _subscription = _supabase
-          .from('prescribed_exercises')
-          .stream(primaryKey: ['id'])
-          .eq('patient_id', patientId)
-          .listen((data) {
-            if (mounted) {
-              setState(() {
-                // Map all prescribed exercises from Supabase
-                _exercises = data
-                    .map(
-                      (map) =>
-                          Exercise.fromMap(map, ExerciseCategory.therapist),
-                    )
-                    .toList();
-              });
-            }
-          });
+      final data = await ApiService.get('/prescribed_exercises?patient_id=$patientId', includeAuth: true);
+      if (mounted) {
+        setState(() {
+          _exercises = (data as List).map((map) => Exercise.fromMap(map as Map<String, dynamic>, ExerciseCategory.therapist)).toList();
+        });
+      }
     }
   }
 
   @override
   void initState() {
     super.initState();
-    _setupExercises();
+    ApiService.get('/profiles/me', includeAuth: true).then((user) {
+      if (mounted) {
+        setState(() {
+          _currentUser = user as Map<String, dynamic>;
+        });
+        _setupExercises();
+        _pollingTimer = Timer.periodic(const Duration(seconds: 10), (_) => _setupExercises());
+      }
+    });
   }
 
   @override
   void dispose() {
     _reasonController.dispose();
-    _subscription?.cancel();
+    _pollingTimer?.cancel();
     super.dispose();
   }
 
@@ -492,10 +489,7 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
                                   // Update Supabase if it's a prescribed exercise
                                   if (exercise.category ==
                                       ExerciseCategory.therapist) {
-                                    await _supabase
-                                        .from('prescribed_exercises')
-                                        .update({'status': 'completed'})
-                                        .eq('id', exercise.id);
+                                    await ApiService.put('/prescribed_exercises/${exercise.id}', {'status': 'completed'}, includeAuth: true);
                                   }
                                 },
                                 style: ElevatedButton.styleFrom(
@@ -743,13 +737,10 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
 
                 // Update Supabase if it's a prescribed exercise
                 if (exercise.category == ExerciseCategory.therapist) {
-                  await _supabase
-                      .from('prescribed_exercises')
-                      .update({
-                        'status': 'skipped',
-                        'skip_reason': _reasonController.text,
-                      })
-                      .eq('id', exercise.id);
+                  await ApiService.put('/prescribed_exercises/${exercise.id}', {
+                    'status': 'skipped',
+                    'skip_reason': _reasonController.text,
+                  }, includeAuth: true);
                 }
 
                 Navigator.pop(context);

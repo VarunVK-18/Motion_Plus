@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../services/api_service.dart';
 import 'auth_service.dart';
 import 'package:flutter/services.dart';
 import 'forgot_password.dart';
@@ -31,12 +31,13 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
 
     setState(() => _isLoading = true);
     try {
-      final response = await Supabase.instance.client.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      final response = await ApiService.post('/auth/login', {
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text.trim(),
+      }, includeAuth: false);
 
-      if (response.user != null) {
+      if (response != null && response['token'] != null) {
+        await ApiService.saveToken(response['token']);
         // Trigger the system's "Save Password" popup
         TextInput.finishAutofillContext();
 
@@ -44,21 +45,12 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
           await AuthService.handleRedirection(context, portal: 'staff');
         }
       }
-    } on AuthException catch (error) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(error.message),
-            backgroundColor: const Color(0xFFEF4444),
-          ),
-        );
-      }
     } catch (error) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('An unexpected error occurred'),
-            backgroundColor: Color(0xFFEF4444),
+          SnackBar(
+            content: Text(error.toString().replaceAll('Exception: ', '')),
+            backgroundColor: const Color(0xFFEF4444),
           ),
         );
       }

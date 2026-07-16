@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
 import 'patient_dashboard.dart';
 
@@ -18,7 +18,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
   final _formKey2 = GlobalKey<FormState>();
   final _formKey3 = GlobalKey<FormState>();
   final _formKey4 = GlobalKey<FormState>();
-  final _supabase = Supabase.instance.client;
+  
 
   bool _isSubmitting = false;
   int _currentStep = 0;
@@ -106,7 +106,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
 
     setState(() => _isSubmitting = true);
     try {
-      final user = _supabase.auth.currentUser;
+      final user = await ApiService.get('/profiles/me', includeAuth: true);
       if (user == null) throw 'User not logged in';
 
       final Map<String, dynamic> basicInfo = {
@@ -145,8 +145,8 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
         'sleep_quality': _sleepQuality,
       };
 
-      await _supabase.from('patient_intake_forms').insert({
-        'patient_id': user.id,
+      await ApiService.post('/patient_intake_forms', {
+        'patient_id': user['id'],
         'basic_info': basicInfo,
         'referral_info': referralInfo,
         'primary_complaint': _complaintCtrl.text,
@@ -164,7 +164,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
         'assistive_device': _assistiveDevice,
         'home_exercise_compliance': _homeExercise,
         'consent': _consent,
-      });
+      }, includeAuth: true);
 
       if (mounted) {
         // Successful submission, go back to dashboard

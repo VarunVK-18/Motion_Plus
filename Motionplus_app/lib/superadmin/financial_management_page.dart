@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../services/api_service.dart';
 
 class FinancialManagementPage extends StatefulWidget {
   const FinancialManagementPage({super.key});
@@ -13,7 +13,7 @@ class FinancialManagementPage extends StatefulWidget {
 
 class _FinancialManagementPageState extends State<FinancialManagementPage>
     with SingleTickerProviderStateMixin {
-  final _supabase = Supabase.instance.client;
+  
   late TabController _tabController;
   String selectedFilter = 'This Month';
   DateTimeRange? customRange;
@@ -137,10 +137,11 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
               final newPrice = controller.text;
               Navigator.pop(context); // close dialog immediately for UX
               try {
-                await _supabase.from('platform_settings').upsert({
+                await ApiService.post('/settings', {
                   'key': 'pkg_$title',
                   'value': newPrice,
-                }, onConflict: 'key');
+                }, includeAuth: true);
+                if (mounted) setState(() {});
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -166,8 +167,8 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
   }
 
   Widget _buildPackagesTab() {
-    return StreamBuilder(
-      stream: _supabase.from('platform_settings').stream(primaryKey: ['id']),
+    return FutureBuilder(
+      future: ApiService.get('/settings', includeAuth: true),
       builder: (context, snapshot) {
         final settings = {
           for (var s in (snapshot.data ?? [])) s['key']: s['value'],
@@ -325,21 +326,8 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
       children: [
         _buildDateFilter(),
         Expanded(
-          child: StreamBuilder<List<Map<String, dynamic>>>(
-            stream: _supabase.from('sessions').stream(primaryKey: ['id']).asyncMap((
-              _,
-            ) async {
-              try {
-                final data = await _supabase
-                    .from('sessions')
-                    .select(
-                      '*, therapist:profiles!sessions_therapist_id_fkey(full_name), patient:profiles!sessions_patient_id_fkey(full_name, phone)',
-                    );
-                return List<Map<String, dynamic>>.from(data);
-              } catch (e) {
-                return <Map<String, dynamic>>[];
-              }
-            }),
+          child: FutureBuilder(
+            future: ApiService.get('/sessions', includeAuth: true),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Center(
@@ -377,7 +365,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                 return const Center(child: CircularProgressIndicator());
               }
 
-              final allSessions = snapshot.data ?? [];
+              final allSessions = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
               final startDate = _getStartDate();
               final endDate = _getEndDate();
 
