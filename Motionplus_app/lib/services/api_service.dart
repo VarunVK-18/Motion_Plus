@@ -4,7 +4,7 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import '../core/constants/port.dart';
 
 class ApiService {
-  static String get baseUrl => PortConstants.apiUrl; 
+  static String get baseUrl => PortConstants.apiUrl;
   static const _storage = FlutterSecureStorage();
 
   static Future<String?> getToken() async {
@@ -28,7 +28,7 @@ class ApiService {
     if (includeAuth) {
       final token = await getToken();
       if (token != null) {
-        headers['Authorization'] = 'Bearer \$token';
+        headers['Authorization'] = 'Bearer $token';
       }
     }
     return headers;
@@ -38,15 +38,19 @@ class ApiService {
   static Future<dynamic> post(String endpoint, Map<String, dynamic> body, {bool includeAuth = true}) async {
     try {
       final headers = await _getHeaders(includeAuth: includeAuth);
+      final url = '$baseUrl$endpoint';
+      // ignore: avoid_print
+      print('API POST: $url');
       final response = await http.post(
-        Uri.parse('\$baseUrl\$endpoint'),
+        Uri.parse(url),
         headers: headers,
         body: jsonEncode(body),
       );
-      
       return _processResponse(response);
     } catch (e) {
-      throw Exception('Network error: \$e');
+      // ignore: avoid_print
+      print('API POST ERROR: $e');
+      throw Exception('Network error: $e');
     }
   }
 
@@ -54,14 +58,18 @@ class ApiService {
   static Future<dynamic> get(String endpoint, {bool includeAuth = true}) async {
     try {
       final headers = await _getHeaders(includeAuth: includeAuth);
+      final url = '$baseUrl$endpoint';
+      // ignore: avoid_print
+      print('API GET: $url');
       final response = await http.get(
-        Uri.parse('\$baseUrl\$endpoint'),
+        Uri.parse(url),
         headers: headers,
       );
-      
       return _processResponse(response);
     } catch (e) {
-      throw Exception('Network error: \$e');
+      // ignore: avoid_print
+      print('API GET ERROR: $e');
+      throw Exception('Network error: $e');
     }
   }
 
@@ -69,15 +77,15 @@ class ApiService {
   static Future<dynamic> put(String endpoint, Map<String, dynamic> body, {bool includeAuth = true}) async {
     try {
       final headers = await _getHeaders(includeAuth: includeAuth);
+      final url = '$baseUrl$endpoint';
       final response = await http.put(
-        Uri.parse('\$baseUrl\$endpoint'),
+        Uri.parse(url),
         headers: headers,
         body: jsonEncode(body),
       );
-      
       return _processResponse(response);
     } catch (e) {
-      throw Exception('Network error: \$e');
+      throw Exception('Network error: $e');
     }
   }
 
@@ -85,14 +93,14 @@ class ApiService {
   static Future<dynamic> delete(String endpoint, {bool includeAuth = true}) async {
     try {
       final headers = await _getHeaders(includeAuth: includeAuth);
+      final url = '$baseUrl$endpoint';
       final response = await http.delete(
-        Uri.parse('\$baseUrl\$endpoint'),
+        Uri.parse(url),
         headers: headers,
       );
-      
       return _processResponse(response);
     } catch (e) {
-      throw Exception('Network error: \$e');
+      throw Exception('Network error: $e');
     }
   }
 
@@ -104,7 +112,7 @@ class ApiService {
       }
       return null;
     } else {
-      String errorMessage = 'Error \${response.statusCode}';
+      String errorMessage = 'Error ${response.statusCode}';
       try {
         final errorBody = jsonDecode(response.body);
         if (errorBody['message'] != null) {

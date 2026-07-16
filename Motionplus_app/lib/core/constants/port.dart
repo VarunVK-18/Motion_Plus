@@ -8,7 +8,7 @@ class PortConstants {
       return 'https://motion-plus.onrender.com';
     } else {
       // Development URL when running locally (e.g., flutter run)
-      // Note: If using physical device, use the PC's Wi-Fi IPv4 address
+      // Note: Uses your PC's Wi-Fi IP so physical phone can connect
       if (defaultTargetPlatform == TargetPlatform.android) {
         return 'http://192.168.29.105:5000';
       } else {
@@ -18,5 +18,5 @@ class PortConstants {
   }
 
   // Returns the API URL
-  static String get apiUrl => '\$backendUrl/api';
+  static String get apiUrl => '$backendUrl/api';
 }

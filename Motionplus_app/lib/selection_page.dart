@@ -19,10 +19,23 @@ class SelectionPage extends StatefulWidget {
 class _SelectionPageState extends State<SelectionPage> {
   bool _redirecting = false;
 
+  // Server connection status: null = checking, true = connected, false = offline
+  bool? _serverConnected;
+
   @override
   void initState() {
     super.initState();
     _checkToken();
+    _checkServerConnection();
+  }
+
+  Future<void> _checkServerConnection() async {
+    try {
+      await ApiService.get('/clinics', includeAuth: false);
+      if (mounted) setState(() => _serverConnected = true);
+    } catch (e) {
+      if (mounted) setState(() => _serverConnected = false);
+    }
   }
 
   Future<void> _checkToken() async {
@@ -140,6 +153,98 @@ class _SelectionPageState extends State<SelectionPage> {
                                   height: 1.5,
                                 ),
                               ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Server connection badge
+                            AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 400),
+                              child: _serverConnected == null
+                                  ? Container(
+                                      key: const ValueKey('checking'),
+                                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF1F5F9),
+                                        borderRadius: BorderRadius.circular(20),
+                                        border: Border.all(color: const Color(0xFFE2E8F0)),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          const SizedBox(
+                                            width: 12,
+                                            height: 12,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Color(0xFF94A3B8),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          Text(
+                                            'Connecting to server...',
+                                            style: GoogleFonts.outfit(
+                                              fontSize: 12,
+                                              fontWeight: FontWeight.w500,
+                                              color: const Color(0xFF94A3B8),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    )
+                                  : _serverConnected == true
+                                      ? Container(
+                                          key: const ValueKey('connected'),
+                                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFECFDF5),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(color: const Color(0xFF86EFAC)),
+                                          ),
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              const Icon(Icons.check_circle_rounded, size: 13, color: Color(0xFF16A34A)),
+                                              const SizedBox(width: 6),
+                                              Text(
+                                                'Server Connected',
+                                                style: GoogleFonts.outfit(
+                                                  fontSize: 12,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: const Color(0xFF16A34A),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        )
+                                      : GestureDetector(
+                                          key: const ValueKey('offline'),
+                                          onTap: () {
+                                            setState(() => _serverConnected = null);
+                                            _checkServerConnection();
+                                          },
+                                          child: Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFEF2F2),
+                                              borderRadius: BorderRadius.circular(20),
+                                              border: Border.all(color: const Color(0xFFFCA5A5)),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                const Icon(Icons.wifi_off_rounded, size: 13, color: Color(0xFFDC2626)),
+                                                const SizedBox(width: 6),
+                                                Text(
+                                                  'Server Offline — Tap to retry',
+                                                  style: GoogleFonts.outfit(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: const Color(0xFFDC2626),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
                             ),
                             const SizedBox(height: 24),
                             Text(

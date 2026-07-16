@@ -32,6 +32,8 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
 
     setState(() => _isLoading = true);
     try {
+      // DEBUG: print actual URL being used
+      debugPrint('>>> LOGIN URL: ${ApiService.baseUrl}/auth/login');
       final response = await ApiService.post('/auth/login', {
         'email': _emailController.text.trim(),
         'password': _passwordController.text.trim(),
@@ -48,10 +50,13 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
       }
     } catch (error) {
       if (mounted) {
+        // DEBUG: show full error
+        debugPrint('>>> LOGIN ERROR: $error');
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(error.toString().replaceAll('Exception: ', '')),
             backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 8),
           ),
         );
       }
