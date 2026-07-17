@@ -30,11 +30,21 @@ class _SelectionPageState extends State<SelectionPage> {
   }
 
   Future<void> _checkServerConnection() async {
-    try {
-      await ApiService.get('/clinics', includeAuth: false);
-      if (mounted) setState(() => _serverConnected = true);
-    } catch (e) {
-      if (mounted) setState(() => _serverConnected = false);
+    // Try up to 3 times with a 10s timeout each — handles Render cold starts (~30-60s)
+    for (int attempt = 1; attempt <= 3; attempt++) {
+      try {
+        await ApiService.get('/clinics', includeAuth: false)
+            .timeout(const Duration(seconds: 10));
+        if (mounted) setState(() => _serverConnected = true);
+        return; // Connected successfully
+      } catch (e) {
+        if (attempt == 3) {
+          // All 3 attempts failed — show as offline
+          if (mounted) setState(() => _serverConnected = false);
+        }
+        // Wait 3 seconds before retrying
+        await Future.delayed(const Duration(seconds: 3));
+      }
     }
   }
 
