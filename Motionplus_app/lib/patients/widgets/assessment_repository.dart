@@ -8,6 +8,8 @@ import 'package:file_picker/file_picker.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../shared/theme/app_theme.dart';
+import 'package:open_file/open_file.dart';
+import 'package:path_provider/path_provider.dart';
 
 class AssessmentRepository extends StatefulWidget {
   final String patientId;
@@ -38,11 +40,40 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
 
   Future<void> _fetchAssessments() async {
     try {
-      final response = await ApiService.get('/patient_documents?patient_id=${widget.patientId}&_sort=created_at:desc', includeAuth: true);
+      final docsResponse = await ApiService.get('/patient_documents?patient_id=${widget.patientId}', includeAuth: true);
+      final mediaResponse = await ApiService.get('/patient_media_files?patient_id=${widget.patientId}', includeAuth: true);
+
+      final List<Map<String, dynamic>> combined = [];
+      
+      void processResponse(dynamic response) {
+        if (response != null && response is List) {
+          for (var item in response) {
+            combined.add({
+              'id': item['_id'] ?? item['id'],
+              'patient_id': item['patient_id'],
+              'uploader_id': item['uploader_id'] ?? item['patient_id'],
+              'title': item['file_name'] ?? item['title'] ?? 'Untitled Document',
+              'type': item['document_type'] ?? item['media_type'] ?? item['type'] ?? 'Unknown',
+              'file_url': item['file_url'] ?? item['url'],
+              'created_at': item['created_at'] ?? DateTime.now().toUtc().toIso8601String(),
+            });
+          }
+        }
+      }
+
+      processResponse(docsResponse);
+      processResponse(mediaResponse);
+
+      // Sort by created_at descending
+      combined.sort((a, b) {
+        final dateA = DateTime.tryParse(a['created_at'].toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        final dateB = DateTime.tryParse(b['created_at'].toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+        return dateB.compareTo(dateA);
+      });
 
       if (mounted) {
         setState(() {
-          _assessments = List<Map<String, dynamic>>.from(response);
+          _assessments = combined;
           _isLoading = false;
         });
       }
@@ -118,6 +149,20 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
         setState(() => _isUploading = false);
         return; // User canceled
       }
+      
+      final fileSize = await fileToUpload.length();
+      if (fileSize > 2 * 1024 * 1024) {
+        setState(() => _isUploading = false);
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Warning: Please upload a document less than 2 MB.'),
+              backgroundColor: Color(0xFFF59E0B),
+            ),
+          );
+        }
+        return;
+      }
 
       // Ask for document name
       final customName = await _askForDocumentName(fileName);
@@ -149,12 +194,12 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
       final response = await ApiService.post(endpoint, payload, includeAuth: true);
       
       final newDoc = {
-        'id': response['_id'],
+        'id': response['_id'] ?? response['id'],
         'patient_id': response['patient_id'],
         'uploader_id': _currentUser?['id'] ?? response['patient_id'],
-        'file_name': response['file_name'],
-        'file_type': response['document_type'] ?? response['media_type'],
-        'url': response['file_url'],
+        'title': response['file_name'] ?? finalFileName,
+        'type': response['document_type'] ?? response['media_type'] ?? type,
+        'file_url': response['file_url'] ?? base64String,
         'created_at': response['created_at'] ?? DateTime.now().toUtc().toIso8601String(),
       };
       
@@ -289,29 +334,65 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
                   children: [
                     IconButton(
                       icon: const Icon(Icons.visibility_rounded, color: AppTheme.deepSageGreen),
-                      onPressed: () {
-                        final url = doc['file_url'];
-                        if (url != null) launchUrl(Uri.parse(url));
-                      },
+                      onPressed: () => _openDocument(doc),
                     ),
                     IconButton(
                       icon: const Icon(Icons.download_rounded, color: AppTheme.deepSageGreen),
-                      onPressed: () {
-                        final url = doc['file_url'];
-                        if (url != null) launchUrl(Uri.parse(url));
-                      },
+                      onPressed: () => _openDocument(doc), // Same action for now, open_file handles download/view
                     ),
                   ],
                 ),
-                onTap: () {
-                  final url = doc['file_url'];
-                  if (url != null) launchUrl(Uri.parse(url));
-                },
+                onTap: () => _openDocument(doc),
               );
             },
           ),
       ],
     );
+  }
+
+  Future<void> _openDocument(Map<String, dynamic> doc) async {
+    final url = doc['file_url']?.toString();
+    final fileName = doc['title']?.toString() ?? 'document';
+    if (url == null || url.isEmpty) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Document is empty.')));
+      return;
+    }
+
+    try {
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+      } else {
+        // Assume base64
+        String base64Str = url;
+        // Strip data URI prefix if exists
+        if (base64Str.contains(',')) {
+          base64Str = base64Str.split(',').last;
+        }
+        final bytes = base64Decode(base64Str);
+        final tempDir = await getTemporaryDirectory();
+        
+        // Ensure the filename has an extension
+        String extension = '';
+        if (!fileName.contains('.')) {
+          final type = doc['type']?.toString().toUpperCase() ?? '';
+          if (type == 'PDF') extension = '.pdf';
+          else if (type == 'IMAGE') extension = '.png';
+          else if (type == 'VIDEO') extension = '.mp4';
+          else if (type == 'AUDIO') extension = '.m4a';
+        }
+        
+        final safeFileName = fileName.replaceAll(RegExp(r'[^\w\.\-]'), '_');
+        final file = File('${tempDir.path}/$safeFileName$extension');
+        await file.writeAsBytes(bytes);
+        
+        final result = await OpenFile.open(file.path);
+        if (result.type != ResultType.done && mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Could not open document: ${result.message}')));
+        }
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error opening document: $e')));
+    }
   }
 
   IconData _getIconForType(String type) {

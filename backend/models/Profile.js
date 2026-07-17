@@ -10,14 +10,16 @@ const profileSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     clinic_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' },
+    specialization: { type: String },
     avatar_url: { type: String }, // Can be Base64 string if file is small
+    fcmTokens: [String], // Store multiple device tokens
     created_at: { type: Date, default: Date.now },
 }, { timestamps: true });
 
 // Hash password before saving
-profileSchema.pre('save', async function(next) {
+profileSchema.pre('save', async function() {
     if (!this.isModified('password')) {
-        next();
+        return;
     }
     const salt = await bcrypt.genSalt(10);
     this.password = await bcrypt.hash(this.password, salt);

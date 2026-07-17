@@ -33,7 +33,7 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
       if (mounted) {
         setState(() {
           currentUser = user;
-          _adminClinicId = user['clinic_id'];
+          _adminClinicId = user['clinic_id'] == null ? null : ((user['clinic_id'] is Map) ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']).toString() : user['clinic_id'].toString());
           _isLoading = false;
         });
         if (_adminClinicId != null) {

@@ -25,18 +25,32 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
   int _lastBpm = 72;
   int _pendingReminders = 3;
   DateTimeRange? _selectedDateRange;
+  late Future<List<dynamic>> _dataFuture;
 
   @override
   void initState() {
-    ApiService.get('/profiles/me', includeAuth: true).then((user) {
-      if (mounted) {
-        setState(() {
-          _currentUser = user as Map<String, dynamic>;
-        });
-      }
-    });
     super.initState();
     _loadVitals();
+    _dataFuture = _loadDataWithBuffer();
+  }
+
+  Future<List<dynamic>> _loadDataWithBuffer() async {
+    // 300ms buffer to allow the page transition animation to finish smoothly
+    await Future.delayed(const Duration(milliseconds: 300));
+    
+    dynamic user = _currentUser;
+    if (user == null) {
+      user = await ApiService.get('/profiles/me', includeAuth: true);
+      if (mounted) setState(() => _currentUser = user as Map<String, dynamic>);
+    }
+    
+    final targetId = widget.patientId ?? user?['id'];
+    if (targetId == null) return [[], []];
+
+    final sessions = await ApiService.get('/sessions?patient_id=$targetId', includeAuth: true);
+    final checkins = await ApiService.get('/morning_checkins?patient_id=$targetId', includeAuth: true);
+
+    return [sessions, checkins];
   }
 
   Future<void> _loadVitals() async {
@@ -61,25 +75,33 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
 
   @override
   Widget build(BuildContext context) {
-    final targetId = widget.patientId ?? _currentUser?['id'];
-    if (targetId == null) return const Center(child: Text('User not found'));
-
-    return FutureBuilder<dynamic>(
-      future: ApiService.get('/sessions?patient_id=$targetId', includeAuth: true),
-      builder: (context, sessionSnapshot) {
-        if (sessionSnapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+    return FutureBuilder<List<dynamic>>(
+      future: _dataFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(child: CircularProgressIndicator()),
+          );
         }
 
-        return FutureBuilder<dynamic>(
-          future: ApiService.get('/morning_checkins?patient_id=$targetId', includeAuth: true),
-          builder: (context, checkinSnapshot) {
-            if (checkinSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+        if (snapshot.hasError || !snapshot.hasData) {
+          return const Scaffold(
+            backgroundColor: Color(0xFFF8FAFC),
+            body: Center(child: Text('User not found or error loading data')),
+          );
+        }
 
-            final allSessions = sessionSnapshot.data ?? [];
-            final allCheckins = checkinSnapshot.data ?? [];
+        final sessionData = snapshot.data![0];
+        final checkinData = snapshot.data![1];
+
+        final allSessions = (sessionData as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ?? <Map<String, dynamic>>[];
+            
+        final allCheckins = (checkinData as List?)
+            ?.map((e) => Map<String, dynamic>.from(e as Map))
+            .toList() ?? <Map<String, dynamic>>[];
 
             // Apply Date Range Filter for sessions
             final sessions = _selectedDateRange == null
@@ -134,36 +156,42 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
 
             return Scaffold(
               backgroundColor: const Color(0xFFF8FAFC),
-              body: SafeArea(
-                bottom: false,
-                child: SingleChildScrollView(
-                  physics: const BouncingScrollPhysics(),
-                  padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildHeader(),
-                      const SizedBox(height: 24),
-                      _buildTabSelector(),
-                      const SizedBox(height: 24),
-                      _buildActivityLineChart(sessions),
-                      const SizedBox(height: 24),
-                      _buildMorningCheckAnalytics(checkins),
-                      const SizedBox(height: 24),
-                      _buildOverviewCard(recoveryPercentage),
-                      const SizedBox(height: 24),
-                      _buildRecoveryDonutChart(completedCount, totalCount),
-                      const SizedBox(height: 24),
-                      _buildWeeklyProgressList(recoveryPercentage, checkins),
-                    ],
+              body: RefreshIndicator(
+                onRefresh: () async {
+                  setState(() {
+                    _dataFuture = _loadDataWithBuffer();
+                  });
+                  await _dataFuture;
+                },
+                child: SafeArea(
+                  bottom: false,
+                  child: SingleChildScrollView(
+                    physics: const BouncingScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 10, 20, 120),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildHeader(),
+                        const SizedBox(height: 24),
+                        _buildTabSelector(),
+                        const SizedBox(height: 24),
+                        _buildActivityLineChart(sessions),
+                        const SizedBox(height: 24),
+                        _buildMorningCheckAnalytics(checkins),
+                        const SizedBox(height: 24),
+                        _buildOverviewCard(recoveryPercentage),
+                        const SizedBox(height: 24),
+                        _buildRecoveryDonutChart(completedCount, totalCount),
+                        const SizedBox(height: 24),
+                        _buildWeeklyProgressList(recoveryPercentage, checkins),
+                      ],
+                    ),
                   ),
                 ),
               ),
             );
           },
         );
-      },
-    );
   }
 
   Widget _buildHeader() {

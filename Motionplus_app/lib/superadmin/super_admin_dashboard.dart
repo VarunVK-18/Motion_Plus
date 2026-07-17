@@ -119,8 +119,8 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
 
       final mappedSessions = sessionData.map<Map<String, dynamic>>((s) {
         final Map<String, dynamic> session = Map<String, dynamic>.from(s as Map);
-        session['patient_name'] = session['patient']?['full_name'];
-        session['therapist_name'] = session['therapist']?['full_name'];
+        session['patient_name'] = session['patient_id']?['full_name'];
+        session['therapist_name'] = session['therapist_id']?['full_name'];
         
         session['activity_time'] = session['completed_at'] ?? session['created_at'];
         session['created_at'] = session['activity_time'];
@@ -335,7 +335,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                     context: context,
                     icon: HugeIcons.strokeRoundedSettings01,
                     title: 'Settings',
-                    onTap: () => _navigateTo(const PlatformSettingsPage()),
+                    onTap: () => _navigateTo(PlatformSettingsPage(
+                      onThemeChanged: (isDark) {
+                        _isDarkModeNotifier.value = isDark;
+                        setState(() {
+                          _isDarkMode = isDark;
+                        });
+                      },
+                    )),
                   ),
                   _buildDrawerItem(
                     context: context,
@@ -630,7 +637,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 color: Theme.of(context).colorScheme.onSurface,
               ),
             ),
-            _buildDateFilterDropdown(),
+            _buildDateFilterDropdown(context),
           ],
         ),
         const SizedBox(height: 16),
@@ -775,7 +782,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
     );
   }
 
-  Widget _buildDateFilterDropdown() {
+  Widget _buildDateFilterDropdown(BuildContext context) {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       decoration: BoxDecoration(
@@ -1048,28 +1055,14 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               ),
             ),
           ),
-          Container(
-            margin: const EdgeInsets.only(left: 8),
-            child: ElevatedButton(
-              onPressed: () => Navigator.pop(context, true),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFFBE123C),
-                foregroundColor: Colors.white,
-                elevation: 0,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 20,
-                  vertical: 10,
-                ),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-              child: Text(
-                'LOGOUT',
-                style: GoogleFonts.outfit(
-                  fontWeight: FontWeight.w800,
-                  fontSize: 12,
-                ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: Text(
+              'LOGOUT',
+              style: GoogleFonts.outfit(
+                color: const Color(0xFFBE123C),
+                fontWeight: FontWeight.w700,
+                fontSize: 12,
               ),
             ),
           ),

@@ -70,19 +70,112 @@ class _PatientDashboardState extends State<PatientDashboard> {
 
   @override
   void initState() {
+    super.initState();
     ApiService.get('/profiles/me', includeAuth: true).then((user) {
       if (mounted) {
         setState(() {
           _currentUser = user as Map<String, dynamic>;
           _initSessionsStream();
+          _checkIntakeForm();
         });
       }
     });
-    super.initState();
-    _checkIntakeForm();
     _loadVitals();
     _initSessionsStream();
     ProfileImageService().loadProfileImage();
+
+    // Schedule daily local notifications
+    _scheduleLocalReminders();
+  }
+
+  Future<void> _scheduleLocalReminders() async {
+    final prefs = await SharedPreferences.getInstance();
+    final bool hasScheduled = prefs.getBool('reminders_scheduled_v2') ?? false;
+    
+    if (!hasScheduled) {
+      // 8 AM Morning Form Reminder
+      await NotificationService().scheduleDailyReminder(
+        id: 1, 
+        title: 'Morning Check-in', 
+        body: 'Good morning! Please fill out your daily morning form.', 
+        hour: 8, 
+        minute: 0
+      );
+
+      // 1 PM Water Intake Reminder
+      await NotificationService().scheduleDailyReminder(
+        id: 2, 
+        title: 'Stay Hydrated', 
+        body: 'Remember to log your water intake today!', 
+        hour: 13, 
+        minute: 0
+      );
+
+      // 3 PM Time to drink water
+      await NotificationService().scheduleDailyReminder(
+        id: 5, 
+        title: 'Hydration', 
+        body: 'Time to drink water.', 
+        hour: 15, 
+        minute: 0
+      );
+
+      // 6 PM You haven't walked today
+      await NotificationService().scheduleDailyReminder(
+        id: 3, 
+        title: 'Activity Reminder', 
+        body: "You haven't walked today.", 
+        hour: 18, 
+        minute: 0
+      );
+
+      // 7 PM Don't forget your home exercises
+      await NotificationService().scheduleDailyReminder(
+        id: 4, 
+        title: 'Exercise Reminder', 
+        body: "Don't forget your home exercises.", 
+        hour: 19, 
+        minute: 0
+      );
+
+      // 8 PM You've completed 5 sessions!
+      await NotificationService().scheduleDailyReminder(
+        id: 6, 
+        title: 'Milestone Reached', 
+        body: "You've completed 5 sessions!", 
+        hour: 20, 
+        minute: 0
+      );
+
+      // 9 AM Monthly reassessment is due
+      await NotificationService().scheduleDailyReminder(
+        id: 7, 
+        title: 'Reassessment Due', 
+        body: "Monthly reassessment is due.", 
+        hour: 9, 
+        minute: 0
+      );
+
+      // 10 AM Appointment tomorrow at 2 PM
+      await NotificationService().scheduleDailyReminder(
+        id: 8, 
+        title: 'Upcoming Appointment', 
+        body: "Appointment tomorrow at 2 PM.", 
+        hour: 10, 
+        minute: 0
+      );
+
+      // 11 AM Pain Alert
+      await NotificationService().scheduleDailyReminder(
+        id: 9, 
+        title: 'Pain Alert', 
+        body: "Pain increased for 3 consecutive days. Contact your therapist.", 
+        hour: 11, 
+        minute: 0
+      );
+
+      await prefs.setBool('reminders_scheduled_v2', true);
+    }
   }
 
   Future<void> _checkIntakeForm() async {
@@ -91,7 +184,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     try {
       final response = await ApiService.get('/patient_intake_forms?patient_id=${user['id']}', includeAuth: true);
 
-      if (response == null && mounted) {
+      if ((response == null || (response is List && response.isEmpty)) && mounted) {
         // No intake form found, redirect to Intake Form Screen
         await Navigator.pushReplacement(
           context,
@@ -174,9 +267,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
       // and they haven't filled a morning form today, show it.
       if (currentCompletedCount > 0) {
         final lastMorningFormDateStr = prefs.getString('last_morning_form_date');
+        final skippedDateStr = prefs.getString('skipped_morning_form_date');
         
-        // Show if not filled today
-        if (lastMorningFormDateStr != todayStr) {
+        // Show if not filled today and not skipped today
+        if (lastMorningFormDateStr != todayStr && skippedDateStr != todayStr) {
           shouldShowForm = true;
           formSessionId = sessionId;
           break; // Show for at least one session
@@ -197,6 +291,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
         prefs.setString('last_morning_form_date', todayStr);
         // Clear the trigger so it doesn't fire again for this specific increment
         prefs.remove('session_last_increment_date_$formSessionId');
+      } else {
+        // User closed the form without completing it
+        prefs.setString('skipped_morning_form_date', todayStr);
       }
       _morningFormTriggered = false;
     }
@@ -1283,21 +1380,23 @@ class _PatientDashboardState extends State<PatientDashboard> {
   }
 
   Widget _buildHistoryCard(Map<String, dynamic> s) {
-    final dateStr =
-        s['completed_at'] ??
-        s['created_at'] ??
-        DateTime.now().toIso8601String();
-    final date = DateTime.parse(dateStr.toString()).toLocal();
-    final spec = s['specialization_required'].toString().toUpperCase();
-    final amount = s['fee_charged'] ?? 0;
+    return StatefulBuilder(
+      builder: (context, setCardState) {
+        final dateStr =
+            s['completed_at'] ??
+            s['created_at'] ??
+            DateTime.now().toIso8601String();
+        final date = DateTime.parse(dateStr.toString()).toLocal();
+        final spec = s['specialization_required'].toString().toUpperCase();
+        final amount = s['fee_charged'] ?? 0;
 
-    // Check if patient feedback is already provided
-    final String? response = s['patient_feedback']?.toString();
-    final bool hasFeedback =
-        response != null &&
-        response.trim() != 'null' &&
-        response.trim() != 'None' &&
-        response.trim().isNotEmpty;
+        // Check if patient feedback is already provided
+        final String? response = s['patient_feedback']?.toString();
+        final bool hasFeedback =
+            response != null &&
+            response.trim() != 'null' &&
+            response.trim() != 'None' &&
+            response.trim().isNotEmpty;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -1434,7 +1533,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       width: double.infinity,
                       child: ElevatedButton.icon(
                         onPressed: () =>
-                            _showFeedbackDialog(s['id'].toString()),
+                            _showFeedbackDialog(s['id'].toString(), s, setCardState),
                         icon: const hi.HugeIcon(
                           icon: hi.HugeIcons.strokeRoundedLicenseDraft,
                           size: 16,
@@ -1517,9 +1616,10 @@ class _PatientDashboardState extends State<PatientDashboard> {
         ),
       ),
     );
+  });
   }
 
-  Future<void> _showFeedbackDialog(String sessionId) async {
+  Future<void> _showFeedbackDialog(String sessionId, [Map<String, dynamic>? session, StateSetter? setCardState]) async {
     double recoveryLevel = 5.0;
     double painLevel = 3.0;
     String intensity = 'Medium';
@@ -1751,8 +1851,13 @@ Feedback: ${feedbackController.text}
                           try {
                             await ApiService.put('/sessions/' + sessionId.toString(), {'patient_feedback': formattedFeedback}, includeAuth: true);
                             if (context.mounted) {
+                              if (session != null) {
+                                session['patient_feedback'] = formattedFeedback;
+                              }
+                              if (setCardState != null) {
+                                setCardState(() {});
+                              }
                               Navigator.pop(context, true);
-                              // Force a rebuild of the parent to show updated status immediately
                               setState(() {});
                             }
                           } catch (e) {
@@ -2188,7 +2293,8 @@ Feedback: ${feedbackController.text}
   }
 
   Widget _buildHeader(BuildContext context, String email) {
-    final name = email.split('@')[0].toUpperCase();
+    final String rawName = email.split('@')[0];
+    final name = rawName.isEmpty ? '' : '${rawName[0].toUpperCase()}${rawName.substring(1).toLowerCase()}';
     final topPadding = MediaQuery.of(context).padding.top;
     return Container(
       padding: EdgeInsets.fromLTRB(24, topPadding + 12, 24, 8),
@@ -3128,9 +3234,10 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
       if (startedAt == null) return;
 
       final startTime = DateTime.parse(startedAt.toString()).toLocal();
-      final allotted = widget.session['allotted_time'] ?? 45;
+      final allotted = widget.session['allotted_time'];
+      final minutes = (double.tryParse(allotted?.toString() ?? '45') ?? 45.0).toInt();
       final endTime = startTime.add(
-        Duration(minutes: int.parse(allotted.toString())),
+        Duration(minutes: minutes),
       );
 
       final initialDiff = endTime.difference(DateTime.now());

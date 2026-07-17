@@ -214,7 +214,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
       return;
     }
 
-    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}\$');
+    final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
     if (!emailRegex.hasMatch(_emailController.text.trim())) {
       _showError('Please enter a valid email address');
       return;
@@ -547,7 +547,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final admins = snapshot.data ?? [];
+                  final admins = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
 
                   // Local Filtering for responsive search
                   final filteredAdmins = admins.where((admin) {
@@ -685,7 +685,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           style: GoogleFonts.outfit(fontWeight: FontWeight.w700),
         ),
         subtitle: Text(
-          "Admin • \${admin['phone'] ?? 'No Phone'}\n\$clinicName",
+          "Admin • ${admin['phone'] ?? 'No Phone'}\n$clinicName",
           style: GoogleFonts.outfit(
             fontSize: 12,
             color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),

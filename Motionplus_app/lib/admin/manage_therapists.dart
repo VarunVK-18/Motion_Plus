@@ -39,7 +39,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
       if (mounted) {
         setState(() {
           currentUser = user;
-          _adminClinicId = user['clinic_id'];
+          _adminClinicId = user['clinic_id'] is Map ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']) : user['clinic_id'];
           _isLoading = false;
         });
       }
@@ -104,7 +104,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
     try {
       final names = _nameController.text.trim().split(' ');
       final firstName = names[0];
-      final lastName = names.length > 1 ? names.sublist(1).join(' ') : '';
+      final lastName = names.length > 1 ? names.sublist(1).join(' ') : 'Therapist';
       
       final response = await ApiService.post('/auth/register', {
         'first_name': firstName,
@@ -112,7 +112,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
         'email': _emailController.text.trim(),
         'password': _passwordController.text.trim(),
         'phone': _phoneController.text.trim(),
-        'role': 'therapist_assistant',
+        'role': 'therapist',
         'specialization': _selectedSpecialization.value!.toLowerCase(),
         'clinic_id': _adminClinicId,
       });
@@ -299,7 +299,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
                   ),
                 ),
                 Text(
-                  'Manage clinical therapist assistants.',
+                  'Manage clinical therapists.',
                   style: GoogleFonts.outfit(
                     fontSize: 12,
                     color: const Color(0xFF64748B),
@@ -400,7 +400,9 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
       );
     }
     return FutureBuilder(
-      future: ApiService.get('/profiles?role=therapist_assistant&clinic_id=$_adminClinicId', includeAuth: true),
+      future: _adminClinicId != null
+          ? ApiService.get('/profiles?role=therapist&clinic_id=$_adminClinicId', includeAuth: true)
+          : ApiService.get('/profiles?role=therapist', includeAuth: true),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const Center(
@@ -409,7 +411,10 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
         }
 
         var staff = (snapshot.data as List<dynamic>)
-            .where((s) => s['clinic_id'] == _adminClinicId && s['role'] == 'therapist_assistant')
+            .where((s) {
+              final sClinicId = s['clinic_id'] is Map ? (s['clinic_id']['id'] ?? s['clinic_id']['_id']) : s['clinic_id'];
+              return (_adminClinicId == null || sClinicId == _adminClinicId) && s['role'] == 'therapist';
+            })
             .toList();
         if (_filterCategory != 'All') {
           staff = staff
@@ -479,7 +484,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    person['full_name'] ?? 'Assistant',
+                    person['full_name'] ?? 'Therapist',
                     style: GoogleFonts.outfit(
                       fontSize: 15,
                       fontWeight: FontWeight.w700,
@@ -492,6 +497,24 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
                     runSpacing: 4,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 7,
+                          vertical: 2,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: Text(
+                          'THERAPIST',
+                          style: GoogleFonts.outfit(
+                            fontSize: 9,
+                            fontWeight: FontWeight.w700,
+                            color: const Color(0xFF475569),
+                          ),
+                        ),
+                      ),
                       Container(
                         padding: const EdgeInsets.symmetric(
                           horizontal: 7,

@@ -399,17 +399,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Text('Timeline', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
-            TextButton.icon(
-              onPressed: _showUploadMediaDialog,
-              icon: const Icon(Icons.upload_file_rounded, size: 18, color: AppTheme.deepSageGreen),
-              label: Text('Upload Media', style: GoogleFonts.outfit(color: AppTheme.deepSageGreen, fontWeight: FontWeight.w600)),
-            ),
-          ],
-        ),
+        Text('Timeline', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
         const SizedBox(height: 16),
         listView,
       ],

@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../shared/theme/app_theme.dart';
 import 'exercise_tracker_page.dart';
 import 'reminders_page.dart';
+import 'ai_assistant_view.dart';
+import 'morningform.dart';
 
 class ElderlyModeScreen extends StatelessWidget {
   const ElderlyModeScreen({super.key});
@@ -58,6 +60,7 @@ class ElderlyModeScreen extends StatelessWidget {
               style: GoogleFonts.outfit(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
+                color: Colors.white,
               ),
             ),
           ),
@@ -66,18 +69,15 @@ class ElderlyModeScreen extends StatelessWidget {
     );
 
     if (confirm == true) {
-      final Uri url = Uri.parse('tel:911');
-      if (await canLaunchUrl(url)) {
-        await launchUrl(url);
+      final Uri phoneUri = Uri(scheme: 'tel', path: '108'); // Adjust emergency number as needed
+      if (await canLaunchUrl(phoneUri)) {
+        await launchUrl(phoneUri);
       } else {
         if (context.mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text(
-                'Could not launch dialer',
-                style: GoogleFonts.outfit(fontSize: 18),
-              ),
-              backgroundColor: const Color(0xFFDC2626),
+            const SnackBar(
+              content: Text('Could not launch dialer. Please dial emergency services manually.'),
+              backgroundColor: Color(0xFFDC2626),
             ),
           );
         }
@@ -90,8 +90,9 @@ class ElderlyModeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC), // Soft off-white
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        elevation: 1,
+        backgroundColor: const Color(0xFFF8FAFC),
+        elevation: 0,
+        scrolledUnderElevation: 0,
         shadowColor: Colors.black.withOpacity(0.05),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppTheme.charcoal, size: 28),
@@ -108,21 +109,15 @@ class ElderlyModeScreen extends StatelessWidget {
         centerTitle: true,
         actions: [
           IconButton(
-            icon: const hi.HugeIcon(
-              icon: hi.HugeIcons.strokeRoundedVolumeHigh,
+            icon: const Icon(
+              Icons.support_agent_rounded,
               color: AppTheme.deepSageGreen,
               size: 32,
             ),
             onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    'Voice Guidance Enabled',
-                    style: GoogleFonts.outfit(fontSize: 20, fontWeight: FontWeight.w600),
-                  ),
-                  backgroundColor: AppTheme.deepSageGreen,
-                  behavior: SnackBarBehavior.floating,
-                ),
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AIAssistantView()),
               );
             },
           ),
@@ -168,55 +163,68 @@ class ElderlyModeScreen extends StatelessWidget {
             ),
             const SizedBox(height: 32),
             
-            // Simplified Navigation Items
+            // Navigation Items
             Expanded(
-              child: GridView.count(
-                crossAxisCount: 1,
-                mainAxisSpacing: 20,
-                childAspectRatio: 2.8,
+              child: SingleChildScrollView(
                 physics: const BouncingScrollPhysics(),
-                children: [
-                  _buildLargeButton(
-                    context,
-                    title: 'My Exercises',
-                    icon: hi.HugeIcons.strokeRoundedWalking,
-                    color: AppTheme.deepSageGreen,
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const ExerciseTrackerPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildLargeButton(
-                    context,
-                    title: 'Medication',
-                    icon: hi.HugeIcons.strokeRoundedPill,
-                    color: const Color(0xFF1E40AF), // Deep Blue
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const RemindersPage(),
-                        ),
-                      );
-                    },
-                  ),
-                  _buildLargeButton(
-                    context,
-                    title: 'Contact Therapist',
-                    icon: hi.HugeIcons.strokeRoundedCustomerService01,
-                    color: const Color(0xFF92400E), // High contrast Amber/Brown
-                    onTap: () async {
-                      final Uri url = Uri.parse('tel:1234567890');
-                      if (await canLaunchUrl(url)) {
-                        await launchUrl(url);
-                      }
-                    },
-                  ),
-                ],
+                child: Column(
+                  children: [
+                    _buildLargeButton(
+                      context,
+                      title: 'Morning Check-In',
+                      icon: hi.HugeIcons.strokeRoundedCalendar01,
+                      color: const Color(0xFFF59E0B), // Warm Amber
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const MorningFormScreen(sessionId: 'manual'),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildLargeButton(
+                      context,
+                      title: 'My Exercises',
+                      icon: hi.HugeIcons.strokeRoundedWalking,
+                      color: AppTheme.deepSageGreen,
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ExerciseTrackerPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildLargeButton(
+                      context,
+                      title: 'Medication',
+                      icon: hi.HugeIcons.strokeRoundedPill,
+                      color: const Color(0xFF1E40AF), // Deep Blue
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const RemindersPage(),
+                          ),
+                        );
+                      },
+                    ),
+                    _buildLargeButton(
+                      context,
+                      title: 'Contact Therapist',
+                      icon: hi.HugeIcons.strokeRoundedCustomerService01,
+                      color: const Color(0xFF92400E), // High contrast Amber/Brown
+                      onTap: () async {
+                        final Uri url = Uri.parse('tel:1234567890');
+                        if (await canLaunchUrl(url)) {
+                          await launchUrl(url);
+                        }
+                      },
+                    ),
+                  ],
+                ),
               ),
             ),
           ],
@@ -232,62 +240,46 @@ class ElderlyModeScreen extends StatelessWidget {
     required Color color,
     required VoidCallback onTap,
   }) {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: Colors.grey.withOpacity(0.15)),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: onTap,
-          borderRadius: BorderRadius.circular(24),
-          highlightColor: color.withOpacity(0.05),
-          splashColor: color.withOpacity(0.1),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.start,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: color.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                  ),
-                  child: hi.HugeIcon(
-                    icon: icon,
-                    size: 40,
-                    color: color,
-                  ),
-                ),
-                const SizedBox(width: 24),
-                Expanded(
-                  child: Text(
-                    title,
-                    style: GoogleFonts.outfit(
-                      fontSize: 26,
-                      fontWeight: FontWeight.w700,
-                      color: AppTheme.charcoal,
-                    ),
-                  ),
-                ),
-                Icon(
-                  Icons.arrow_forward_ios_rounded,
-                  color: AppTheme.softSlate.withOpacity(0.5),
-                  size: 28,
-                ),
-              ],
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: Colors.grey.withOpacity(0.2)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(10),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: hi.HugeIcon(
+                icon: icon,
+                size: 24,
+                color: color,
+              ),
             ),
-          ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Text(
+                title.replaceAll('\n', ' '),
+                style: GoogleFonts.outfit(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: const Color(0xFF1E293B),
+                ),
+              ),
+            ),
+            Icon(
+              Icons.chevron_right_rounded,
+              color: Colors.grey[400],
+            ),
+          ],
         ),
       ),
     );

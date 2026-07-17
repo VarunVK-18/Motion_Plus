@@ -249,7 +249,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF8FAFC),
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.close_rounded, color: darkSlate),

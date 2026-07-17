@@ -201,7 +201,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final clinics = snapshot.data ?? [];
+          final clinics = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
           if (clinics.isEmpty) return _buildEmptyState();
           
           return ListView.builder(

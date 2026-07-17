@@ -448,7 +448,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
       backgroundColor: background,
       appBar: AppBar(
         title: Text('Personal Details Form', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: darkSlate, fontSize: 18)),
-        backgroundColor: Colors.white,
+        backgroundColor: background,
         elevation: 0,
         centerTitle: true,
         automaticallyImplyLeading: false, // Force them to complete it

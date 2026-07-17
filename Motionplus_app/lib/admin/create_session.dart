@@ -66,11 +66,11 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
       if (mounted) {
         setState(() {
           currentUser = user;
-          _adminClinicId = user['clinic_id'];
+          _adminClinicId = user['clinic_id'] == null ? null : ((user['clinic_id'] is Map) ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']).toString() : user['clinic_id'].toString());
         });
       }
     } catch (e) {
-      debugPrint('Error fetching admin clinic: \$e');
+      debugPrint('Error fetching admin clinic: $e');
     }
   }
 
@@ -116,7 +116,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Error: \$e'),
+            content: Text('Error: $e'),
             backgroundColor: const Color(0xFFBE123C),
           ),
         );
@@ -153,7 +153,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             ),
             const SizedBox(height: 24),
             Text(
-              'Clinic \$title',
+              'Clinic $title',
               style: GoogleFonts.outfit(
                 fontSize: 20,
                 fontWeight: FontWeight.w700,
@@ -164,8 +164,8 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             Expanded(
               child: FutureBuilder(
                 future: _adminClinicId != null 
-                  ? ApiService.get('/profiles?role=\$role&clinic_id=\$_adminClinicId', includeAuth: true)
-                  : ApiService.get('/profiles?role=\$role', includeAuth: true),
+                  ? ApiService.get('/profiles?role=$role&clinic_id=$_adminClinicId', includeAuth: true)
+                  : ApiService.get('/profiles?role=$role', includeAuth: true),
                 builder: (context, snapshot) {
                   if (!snapshot.hasData) {
                     return const Center(child: CircularProgressIndicator());
@@ -174,7 +174,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                   if (list.isEmpty) {
                     return Center(
                       child: Text(
-                        'No \$title found.',
+                        'No $title found.',
                         style: GoogleFonts.outfit(color: Colors.grey),
                       ),
                     );
@@ -319,7 +319,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                 _buildSectionTitle('Select Patient', Icons.person_search),
                 FutureBuilder(
                   future: _adminClinicId != null
-                    ? ApiService.get('/profiles?role=patient&clinic_id=\$_adminClinicId', includeAuth: true)
+                    ? ApiService.get('/profiles?role=patient&clinic_id=$_adminClinicId', includeAuth: true)
                     : ApiService.get('/profiles?role=patient', includeAuth: true),
                   builder: (context, snapshot) {
                     if (snapshot.hasError) {
@@ -468,7 +468,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
               Expanded(
                 child: _buildClickableCard(
                   'Therapists',
-                  'therapist_assistant',
+                  'therapist',
                   Icons.medical_services_rounded,
                   const Color(0xFF2D6A4F),
                   const Color(0xFFF0FAF7),
@@ -499,7 +499,10 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
         var count = 0;
         if (snapshot.hasData) {
           final list = snapshot.data as List<dynamic>;
-          count = list.where((p) => p['role'] == role && (_adminClinicId == null || p['clinic_id'] == _adminClinicId)).length;
+          count = list.where((p) {
+            final pClinicId = p['clinic_id'] is Map ? (p['clinic_id']['id'] ?? p['clinic_id']['_id']) : p['clinic_id'];
+            return p['role'] == role && (_adminClinicId == null || pClinicId == _adminClinicId);
+          }).length;
         }
         return InkWell(
           onTap: () => _showRegistry(title, role, themeColor),

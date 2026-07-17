@@ -33,7 +33,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
       if (user != null) {
         if (mounted) {
           setState(() {
-            _adminClinicId = user['clinic_id'];
+            _adminClinicId = user['clinic_id'] is Map ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']) : user['clinic_id'];
             _isLoading = false;
           });
         }
@@ -109,7 +109,9 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                   ),
                 )
               : FutureBuilder(
-            future: ApiService.get('/profiles?clinic_id=$_adminClinicId&role=patient', includeAuth: true),
+            future: _adminClinicId != null 
+                ? ApiService.get('/profiles?clinic_id=$_adminClinicId&role=patient', includeAuth: true)
+                : ApiService.get('/profiles?role=patient', includeAuth: true),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(

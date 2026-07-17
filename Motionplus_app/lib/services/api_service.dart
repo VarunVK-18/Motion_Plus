@@ -108,7 +108,21 @@ class ApiService {
   static dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
-        return jsonDecode(response.body);
+        final decoded = jsonDecode(response.body);
+        if (decoded is List) {
+          try {
+            // Attempt to cast to List<Map<String, dynamic>> if possible
+            if (decoded.isEmpty) return <Map<String, dynamic>>[];
+            if (decoded.first is Map) {
+              return List<Map<String, dynamic>>.from(
+                decoded.map((e) => Map<String, dynamic>.from(e as Map))
+              );
+            }
+          } catch (_) {
+            // Fallback if elements aren't maps
+          }
+        }
+        return decoded;
       }
       return null;
     } else {

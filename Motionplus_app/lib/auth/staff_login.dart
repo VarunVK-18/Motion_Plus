@@ -279,7 +279,7 @@ class _StaffLoginPageState extends State<StaffLoginPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
       ),
       child: TextField(
         controller: controller,

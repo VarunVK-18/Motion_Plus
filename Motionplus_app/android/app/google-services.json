@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "408677071896",
+    "project_id": "motionplus-b0a0f",
+    "storage_bucket": "motionplus-b0a0f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:408677071896:android:4be8b4c26a6f477edc576d",
+        "android_client_info": {
+          "package_name": "com.example.motionplus_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB0aoT-4zXG8_jLAsfX8KvxqvH5aE1BW_M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

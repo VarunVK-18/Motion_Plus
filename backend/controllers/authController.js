@@ -54,7 +54,8 @@ const loginUser = async (req, res) => {
     try {
         const { email, password } = req.body;
 
-        const user = await Profile.findOne({ email });
+        // Case-insensitive email lookup
+        const user = await Profile.findOne({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
 
         if (user && (await user.matchPassword(password))) {
             res.json({
@@ -148,6 +149,31 @@ const updatePassword = async (req, res) => {
     }
 };
 
+const updateFcmToken = async (req, res) => {
+    try {
+        const { token } = req.body;
+        if (!token) {
+            return res.status(400).json({ message: 'Token is required' });
+        }
+        
+        const user = await Profile.findById(req.user._id);
+        if (user) {
+            if (!user.fcmTokens) {
+                user.fcmTokens = [];
+            }
+            if (!user.fcmTokens.includes(token)) {
+                user.fcmTokens.push(token);
+                await user.save();
+            }
+            res.json({ message: 'Token updated successfully' });
+        } else {
+            res.status(404).json({ message: 'User not found' });
+        }
+    } catch (error) {
+        res.status(500).json({ message: 'Server error', error: error.message });
+    }
+};
+
 module.exports = {
     registerUser,
     loginUser,
@@ -155,4 +181,5 @@ module.exports = {
     resetPassword,
     verifyOTP,
     updatePassword,
+    updateFcmToken,
 };

@@ -140,6 +140,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
             duration: const Duration(seconds: 2),
           ),
         );
+        setState(() {}); // Refresh FutureBuilder
       }
     } catch (e) {
       if (mounted) {
@@ -163,20 +164,27 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
     try {
       final isFinalSession = (currentCount + 1) >= totalCount;
 
-      await ApiService.put('/sessions/' + sessionId.trim(), {
-            'status': isFinalSession ? 'completed' : 'assigned',
-            'completed_count': currentCount + 1,
-            'completed_at': isFinalSession
-                ? DateTime.now().toUtc().toIso8601String()
-                : null,
-            'session_summary': reportData['session_summary'],
-            'exercises_performed': reportData['exercises_performed'],
-            'pain_fatigue_level': reportData['pain_fatigue_level'],
-            'patient_response': reportData['patient_response'],
-            'therapist_observation': reportData['therapist_observation'],
-            'homework_given': reportData['homework_given'],
-            'session_recommendation': reportData['session_recommendation'],
-          }, includeAuth: true);
+      final Map<String, dynamic> payload = {
+        'status': isFinalSession ? 'completed' : 'assigned',
+        'completed_count': currentCount + 1,
+        'session_summary': reportData['session_summary'],
+        'exercises_performed': reportData['exercises_performed'],
+        'pain_fatigue_level': reportData['pain_fatigue_level'],
+        'patient_response': reportData['patient_response'],
+        'therapist_observation': reportData['therapist_observation'],
+        'homework_given': reportData['homework_given'],
+        'session_recommendation': reportData['session_recommendation'],
+      };
+
+      if (isFinalSession) {
+        payload['completed_at'] = DateTime.now().toUtc().toIso8601String();
+      }
+
+      await ApiService.put(
+        '/sessions/' + sessionId.trim(),
+        payload,
+        includeAuth: true,
+      );
 
       await AuditLogger.logEvent(
         action: 'COMPLETE_SESSION',
@@ -194,6 +202,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
             backgroundColor: const Color(0xFF10B981),
           ),
         );
+        setState(() {}); // Refresh FutureBuilder
       }
     } catch (e) {
       debugPrint("Completion Error for $sessionId: $e");
@@ -290,7 +299,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
               child: FutureBuilder<dynamic>(
                 future: ApiService.get('/smart_alerts?is_read=false', includeAuth: true),
                 builder: (context, snapshot) {
-                  final alerts = snapshot.data ?? [];
+                  final alerts = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
                   if (alerts.isEmpty) return const SizedBox.shrink();
 
                   return Column(
@@ -445,7 +454,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                     );
                   }
 
-                  final allSessions = snapshot.data ?? [];
+                  final allSessions = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
                   final activeSessions = allSessions
                       .where(
                         (s) =>
@@ -507,8 +516,8 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                         onComplete: (reportData) => _completeSession(
                           session['id'].toString(),
                           reportData,
-                          session['completed_count'] ?? 0,
-                          session['session_count'] ?? 1,
+                          int.tryParse(session['completed_count']?.toString() ?? '0') ?? 0,
+                          int.tryParse(session['session_count']?.toString() ?? '1') ?? 1,
                         ),
                       );
                     },
@@ -792,9 +801,10 @@ class _SessionCardState extends State<_SessionCard> {
       if (startedAt == null) return; // Wait for the timestamp to arrive
 
       final startTime = DateTime.parse(startedAt.toString()).toLocal();
-      final allotted = widget.session['allotted_time'] ?? 45;
+      final allotted = widget.session['allotted_time'];
+      final minutes = (double.tryParse(allotted?.toString() ?? '45') ?? 45.0).toInt();
       final endTime = startTime.add(
-        Duration(minutes: int.parse(allotted.toString())),
+        Duration(minutes: minutes),
       );
 
       // Initial calculation to prevent flicker
@@ -997,6 +1007,7 @@ class _SessionCardState extends State<_SessionCard> {
                 height: 54,
                 child: ElevatedButton(
                   onPressed: () {
+                    // All fields are now optional
                     Navigator.pop(context, {
                       'session_summary': summaryController.text,
                       'exercises_performed': exercisesController.text,
@@ -1386,7 +1397,7 @@ class _SessionCardState extends State<_SessionCard> {
                           ),
                         ),
                         child: Text(
-                          'ASSIGN',
+                          'ASSIGN WORKOUT',
                           style: GoogleFonts.outfit(
                             fontWeight: FontWeight.w700,
                             fontSize: 10,
@@ -1649,13 +1660,10 @@ class _SessionCardState extends State<_SessionCard> {
                   ],
                 ),
                 const SizedBox(height: 4),
-                FutureBuilder(
-                  future: ApiService.get('/profiles/' + session['patient_id'].toString(), includeAuth: true),
-                  builder: (context, snap) {
-                    final name = snap.hasData
-                        ? snap.data!['full_name']
-                        : 'Loading...';
-                    final phone = snap.hasData ? snap.data!['phone'] : '...';
+                Builder(
+                  builder: (context) {
+                    final patientIdObj = session['patient_id'];
+                    final name = (patientIdObj is Map) ? patientIdObj['full_name'] : 'Loading...';
                     return Row(
                       children: [
                         Expanded(
@@ -1665,8 +1673,8 @@ class _SessionCardState extends State<_SessionCard> {
                                 context,
                                 MaterialPageRoute(
                                   builder: (context) => PatientProfilePage(
-                                    email: name, // We don't have email in this snap, use name as fallback
-                                    patientId: session['patient_id'],
+                                    email: name,
+                                    patientId: (session['patient_id'] is Map) ? (session['patient_id']['id'] ?? session['patient_id']['_id']).toString() : session['patient_id'].toString(),
                                   ),
                                 ),
                               );
@@ -1683,7 +1691,7 @@ class _SessionCardState extends State<_SessionCard> {
                             ),
                           ),
                         ),
-                        if (snap.hasData)
+                        if (patientIdObj is Map)
                           Row(
                             children: [
                               _buildContactAction(
@@ -1695,7 +1703,7 @@ class _SessionCardState extends State<_SessionCard> {
                                     MaterialPageRoute(
                                       builder: (context) => ChatPage(
                                         sessionId: session['id'],
-                                        receiverId: session['patient_id'],
+                                        receiverId: (session['patient_id'] is Map) ? (session['patient_id']['id'] ?? session['patient_id']['_id']).toString() : session['patient_id'].toString(),
                                         receiverName: name,
                                       ),
                                     ),
@@ -1793,7 +1801,7 @@ class _SessionCardState extends State<_SessionCard> {
                 ),
                 const SizedBox(height: 12),
                 FutureBuilder<dynamic>(
-                  future: ApiService.get('/prescribed_exercises?patient_id=${session['patient_id']}', includeAuth: true),
+                  future: ApiService.get('/prescribed_exercises?patient_id=${(session['patient_id'] is Map) ? (session['patient_id']['id'] ?? session['patient_id']['_id']) : session['patient_id']}', includeAuth: true),
                   builder: (context, snap) {
                     if (!snap.hasData || snap.data!.isEmpty) {
                       return Text(
@@ -1807,7 +1815,10 @@ class _SessionCardState extends State<_SessionCard> {
                     }
                     final items = snap.data!
                         .where(
-                          (ex) => ex['therapist_id'] == session['therapist_id'],
+                          (ex) {
+                             final tId = (session['therapist_id'] is Map) ? (session['therapist_id']['id'] ?? session['therapist_id']['_id']).toString() : session['therapist_id'].toString();
+                             return ex['therapist_id'].toString() == tId;
+                          },
                         )
                         .toList();
 
@@ -1822,7 +1833,7 @@ class _SessionCardState extends State<_SessionCard> {
                       );
                     }
                     return Column(
-                      children: items.map((ex) {
+                      children: items.map<Widget>((ex) {
                         final status = ex['status'] ?? 'pending';
                         final name = ex['exercise_name'] ?? 'Unknown';
                         Color statusColor;
@@ -1934,7 +1945,7 @@ class _SessionCardState extends State<_SessionCard> {
                         child: ElevatedButton(
                           onPressed: () => _showAssignmentDialog(
                             context,
-                            session['patient_id'],
+                            (session['patient_id'] is Map) ? (session['patient_id']['id'] ?? session['patient_id']['_id']).toString() : session['patient_id'].toString(),
                           ),
                           style: ElevatedButton.styleFrom(
                             backgroundColor: const Color(0xFF10B981),
@@ -1950,7 +1961,7 @@ class _SessionCardState extends State<_SessionCard> {
                             elevation: 0,
                           ),
                           child: Text(
-                            'ASSIGN WORKOUTS',
+                            'Assign Workout',
                             style: GoogleFonts.outfit(
                               fontWeight: FontWeight.w800,
                               fontSize: 10,
@@ -2251,7 +2262,11 @@ class _TherapistHistoryPage extends StatelessWidget {
                     );
                   }
                   final history = snapshot.data!
-                      .where((s) => s['status'] == 'completed')
+                      .where((s) {
+                        final isCompleted = s['status'] == 'completed';
+                        final count = int.tryParse(s['completed_count']?.toString() ?? '0') ?? 0;
+                        return isCompleted || count > 0;
+                      })
                       .toList();
                   if (history.isEmpty) {
                     return Center(
@@ -2313,17 +2328,17 @@ class _TherapistHistoryPage extends StatelessWidget {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    FutureBuilder(
-                                      future: ApiService.get('/profiles/' + s['patient_id'].toString(), includeAuth: true),
-                                      builder: (context, p) => Text(
-                                        p.hasData
-                                            ? p.data!['full_name']
-                                            : '...',
+                                    Builder(
+                                      builder: (context) {
+                                        final patientObj = s['patient_id'];
+                                        return Text(
+                                          (patientObj is Map) ? patientObj['full_name'] : '...',
                                         style: GoogleFonts.outfit(
                                           fontWeight: FontWeight.w700,
                                           fontSize: 14,
                                         ),
-                                      ),
+                                      );
+                                      },
                                     ),
                                     const SizedBox(height: 2),
                                     Text(

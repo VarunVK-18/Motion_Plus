@@ -1,11 +1,13 @@
 const Session = require('../models/Session');
+const Profile = require('../models/Profile');
+const { sendPushNotification } = require('../firebaseAdmin');
 
 // @desc    Create a session
 // @route   POST /api/sessions
 // @access  Private
 const createSession = async (req, res) => {
     try {
-        const { patient_id, clinic_id, specialization_required, fee_charged, status, location } = req.body;
+        const { patient_id, clinic_id, specialization_required, fee_charged, status, location, scheduled_at } = req.body;
 
         const session = await Session.create({
             patient_id,
@@ -13,7 +15,8 @@ const createSession = async (req, res) => {
             specialization_required,
             fee_charged,
             status,
-            location
+            location,
+            scheduled_at
         });
 
         res.status(201).json(session);
@@ -64,10 +67,32 @@ const deleteSession = async (req, res) => {
 // @access  Private
 const updateSession = async (req, res) => {
     try {
+        const oldSession = await Session.findById(req.params.id);
         const updated = await Session.findByIdAndUpdate(req.params.id, req.body, { new: true });
         if (!updated) {
             return res.status(404).json({ message: 'Session not found' });
         }
+
+        // Check if status changed
+        if (oldSession && updated.status !== oldSession.status) {
+            const patient = await Profile.findById(updated.patient_id);
+            if (patient && patient.fcmTokens && patient.fcmTokens.length > 0) {
+                let title = '';
+                let body = '';
+                if (updated.status === 'in-progress') {
+                    title = 'Session Started';
+                    body = 'Your therapy session has started. Please join now.';
+                } else if (updated.status === 'completed') {
+                    title = 'Session Completed';
+                    body = 'Your therapy session has been completed.';
+                }
+
+                if (title && body) {
+                    await sendPushNotification(patient.fcmTokens, title, body, { type: 'session' });
+                }
+            }
+        }
+
         res.json(updated);
     } catch (error) {
         console.error('Error updating session:', error);

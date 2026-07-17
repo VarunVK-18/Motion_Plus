@@ -4,7 +4,8 @@ import 'package:hugeicons/hugeicons.dart';
 import '../services/api_service.dart';
 
 class PlatformSettingsPage extends StatefulWidget {
-  const PlatformSettingsPage({super.key});
+  final ValueChanged<bool>? onThemeChanged;
+  const PlatformSettingsPage({super.key, this.onThemeChanged});
 
   @override
   State<PlatformSettingsPage> createState() => _PlatformSettingsPageState();
@@ -48,7 +49,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
              return const Center(child: CircularProgressIndicator());
           }
 
-          final settingsList = snapshot.data ?? [];
+          final settingsList = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
           final settings = {
             for (var s in settingsList) s['key']: s['value'],
           };
@@ -65,19 +66,6 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
                   (val) => _updateSetting('dark_mode_support', val.toString()),
                 ),
               ]),
-
-              const SizedBox(height: 32),
-              _buildSettingsGroup('Security', [
-                _buildSettingTile(
-                  HugeIcons.strokeRoundedKey01,
-                  'Password Policy',
-                  "Strength: \${settings['password_strength'] ?? 'Strong'}",
-                  onTap: () => _showPolicyDialog(
-                    'password_strength',
-                    settings['password_strength'],
-                  ),
-                ),
-              ]),
             ],
           );
         },
@@ -92,12 +80,16 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
         'value': value,
       }, includeAuth: true);
       
+      if (key == 'dark_mode_support' && widget.onThemeChanged != null) {
+        widget.onThemeChanged!(value == 'true');
+      }
+
       _loadSettings();
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text('Failed to update setting: \$e')));
+        ).showSnackBar(SnackBar(content: Text('Failed to update setting: $e')));
       }
     }
   }

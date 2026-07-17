@@ -4,6 +4,8 @@ import '../superadmin/super_admin_dashboard.dart';
 import '../therapist_assistant/therapist_dashboard.dart';
 import '../patients/patient_dashboard.dart';
 import '../services/api_service.dart';
+import '../services/socket_service.dart';
+import '../notifications/notification_service.dart';
 import 'dart:convert';
 
 class AuthService {
@@ -26,6 +28,7 @@ class AuthService {
 
   static Future<void> signOut(BuildContext context) async {
     await ApiService.clearToken();
+    SocketService.disconnect();
     if (context.mounted) {
       Navigator.of(context).pushNamedAndRemoveUntil('/selection', (route) => false);
     }
@@ -42,6 +45,21 @@ class AuthService {
 
     try {
       final String role = user['role'] ?? 'patient';
+      final userId = user['_id'] ?? user['id'];
+      if (userId != null) {
+        SocketService.initializeSocket(userId.toString());
+        
+        // Also register FCM token for background push notifications (don't block routing if it hangs)
+        NotificationService().getToken().timeout(const Duration(seconds: 3)).then((fcmToken) {
+          if (fcmToken != null) {
+            ApiService.post('/auth/fcm-token', {'token': fcmToken}, includeAuth: true).catchError((e) {
+              debugPrint('Failed to save FCM token: $e');
+            });
+          }
+        }).catchError((e) {
+          debugPrint('FCM token fetch timed out or failed: $e');
+        });
+      }
 
       // Validation logic
       if (portal == 'patient' && role != 'patient') {
@@ -60,7 +78,7 @@ class AuthService {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (!context.mounted) return;
         
-        if (role == 'super_admin') {
+        if (role == 'superadmin' || role == 'super_admin') {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const SuperAdminDashboard()),
@@ -72,7 +90,7 @@ class AuthService {
             MaterialPageRoute(builder: (context) => const AdminDashboard()),
             (route) => false,
           );
-        } else if (role == 'therapist_assistant') {
+        } else if (role == 'therapist' || role == 'therapist_assistant') {
           Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(builder: (context) => const TherapistDashboard()),

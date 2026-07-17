@@ -138,7 +138,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final sessions = snapshot.data ?? [];
+        final sessions = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
         if (sessions.isEmpty) return _buildEmptyState(filterStatus);
 
         return ListView.builder(

@@ -4,6 +4,7 @@ import '../services/api_service.dart';
 import 'package:hugeicons/hugeicons.dart' as hi;
 import '../selection_page.dart';
 import 'dart:io';
+import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:image_cropper/image_cropper.dart';
 import '../services/profile_image_service.dart';
@@ -29,6 +30,7 @@ class PatientProfilePage extends StatefulWidget {
 class _PatientProfilePageState extends State<PatientProfilePage> {
   Map<String, dynamic>? _currentUser;
   String _phone = 'Loading...';
+  String _joinedDate = 'Loading...';
   bool _hasAccess = true;
   bool _isLoadingAccess = true;
 
@@ -71,24 +73,45 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
   }
 
   Future<void> _fetchUserProfile() async {
-    final targetId = widget.patientId ?? _currentUser?['id'];
-    if (targetId != null) {
-      try {
+    try {
+      // If we don't have a patientId, we are viewing our own profile
+      if (widget.patientId == null) {
+        final meResponse = await ApiService.get('/profiles/me', includeAuth: true);
+        if (mounted) {
+          setState(() {
+            _currentUser = meResponse as Map<String, dynamic>?;
+          });
+        }
+      }
+      
+      final targetId = widget.patientId ?? _currentUser?['id'];
+      if (targetId != null) {
         final response = await ApiService.get('/profiles/$targetId', includeAuth: true);
-
         if (mounted) {
           setState(() {
             _phone = response?['phone']?.toString().isNotEmpty == true
                 ? response!['phone']
                 : 'Not provided';
+            
+            final createdAt = response?['created_at'] ?? response?['createdAt'];
+            if (createdAt != null) {
+              try {
+                final date = DateTime.parse(createdAt.toString());
+                _joinedDate = DateFormat('MMMM yyyy').format(date);
+              } catch (e) {
+                _joinedDate = 'Unknown';
+              }
+            } else {
+              _joinedDate = 'Unknown';
+            }
           });
         }
-      } catch (e) {
-        if (mounted) {
-          setState(() {
-            _phone = 'Error loading phone';
-          });
-        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _phone = 'Error loading phone';
+        });
       }
     }
   }
@@ -213,25 +236,13 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               ),
             ),
           ),
-          ElevatedButton(
+          TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: AppTheme.errorCoral,
-              foregroundColor: Colors.white,
-              elevation: 0,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 10,
-              ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-            ),
             child: Text(
               'LOGOUT',
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: AppTheme.errorCoral,
               ),
             ),
           ),
@@ -264,7 +275,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
 
   @override
   Widget build(BuildContext context) {
-    if (_isLoadingAccess) {
+    if (_isLoadingAccess || (_currentUser == null && widget.patientId == null)) {
       return const Scaffold(
         backgroundColor: AppTheme.warmOffWhite,
         body: Center(child: CircularProgressIndicator(color: AppTheme.deepSageGreen)),
@@ -448,7 +459,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                   _buildDetailTile(
                     icon: Icons.calendar_today_outlined,
                     label: 'Member Since',
-                    value: 'May 2026', // TODO: Make dynamic
+                    value: _joinedDate,
                   ),
                 ],
               ),

@@ -171,7 +171,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
       future: ApiService.get('/settings', includeAuth: true),
       builder: (context, snapshot) {
         final settings = {
-          for (var s in (snapshot.data ?? [])) s['key']: s['value'],
+          for (var s in ((snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[])) s['key']: s['value'],
         };
         
         String getPrice(String title) {

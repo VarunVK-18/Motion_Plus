@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import '../auth/auth_service.dart';
+import '../services/socket_service.dart';
 import 'dart:async';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:intl/intl.dart';
@@ -26,7 +27,7 @@ class _ChatPageState extends State<ChatPage> {
   
   final _scrollController = ScrollController();
   String? _editingMessageId;
-  Timer? _pollingTimer;
+  StreamSubscription? _socketSubscription;
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
 
@@ -34,12 +35,21 @@ class _ChatPageState extends State<ChatPage> {
   void initState() {
     super.initState();
     _fetchMessages();
-    _pollingTimer = Timer.periodic(const Duration(seconds: 3), (_) => _fetchMessages());
+    _socketSubscription = SocketService.onNewMessage.listen((data) {
+      if (data['session_id'] == widget.sessionId) {
+        if (mounted) {
+          setState(() {
+            _messages.insert(0, data);
+          });
+          _markMessagesAsRead();
+        }
+      }
+    });
   }
 
   @override
   void dispose() {
-    _pollingTimer?.cancel();
+    _socketSubscription?.cancel();
     _messageController.dispose();
     _scrollController.dispose();
     super.dispose();

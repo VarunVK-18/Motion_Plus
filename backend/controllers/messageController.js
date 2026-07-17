@@ -1,4 +1,6 @@
 const Message = require('../models/Message');
+const Profile = require('../models/Profile');
+const { sendPushNotification } = require('../firebaseAdmin');
 
 // @desc    Get messages by session
 // @route   GET /api/messages
@@ -18,6 +20,19 @@ const getMessages = async (req, res) => {
 const createMessage = async (req, res) => {
     try {
         const message = await Message.create(req.body);
+        const io = req.app.get('io');
+        if (io && req.body.receiver_id) {
+            io.to(req.body.receiver_id).emit('newMessage', message);
+            
+            // Send push notification
+            const receiver = await Profile.findById(req.body.receiver_id);
+            if (receiver && receiver.fcmTokens && receiver.fcmTokens.length > 0) {
+                const sender = await Profile.findById(req.body.sender_id);
+                const title = `New message from ${sender ? sender.first_name : 'Therapist'}`;
+                const body = message.content.length > 50 ? message.content.substring(0, 50) + '...' : message.content;
+                await sendPushNotification(receiver.fcmTokens, title, body, { type: 'message' });
+            }
+        }
         res.status(201).json(message);
     } catch (error) {
         res.status(500).json({ message: 'Server error creating message' });

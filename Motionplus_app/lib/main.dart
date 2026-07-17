@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'selection_page.dart';
 import 'shared/splash_screen.dart';
 import 'notifications/notification_service.dart';
@@ -13,6 +14,7 @@ final ValueNotifier<ThemeMode> themeNotifier = ValueNotifier(ThemeMode.light);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   GoogleFonts.config.allowRuntimeFetching = false;
   await NotificationService.init();
 

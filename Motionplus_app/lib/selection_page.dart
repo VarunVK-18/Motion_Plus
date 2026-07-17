@@ -94,10 +94,46 @@ class _SelectionPageState extends State<SelectionPage> {
               ),
             ),
             SafeArea(
-              child: LayoutBuilder(
-                builder: (context, constraints) {
-                  return SingleChildScrollView(
-                    child: ConstrainedBox(
+              child: Column(
+                children: [
+                  if (_serverConnected != true)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                      color: _serverConnected == null 
+                          ? const Color(0xFFF59E0B).withOpacity(0.9) // Warning yellow/orange
+                          : const Color(0xFFEF4444).withOpacity(0.9), // Error red
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          if (_serverConnected == null)
+                            const SizedBox(
+                              width: 14,
+                              height: 14,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                              ),
+                            ),
+                          if (_serverConnected == null) const SizedBox(width: 8),
+                          Text(
+                            _serverConnected == null 
+                                ? 'Connecting to server...' 
+                                : 'Server offline. Retrying...',
+                            style: GoogleFonts.outfit(
+                              color: Colors.white,
+                              fontSize: 14,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  Expanded(
+                    child: LayoutBuilder(
+                      builder: (context, constraints) {
+                        return SingleChildScrollView(
+                          child: ConstrainedBox(
                       constraints: BoxConstraints(
                         minHeight: constraints.maxHeight,
                       ),
@@ -110,29 +146,23 @@ class _SelectionPageState extends State<SelectionPage> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             Container(
-                              padding: const EdgeInsets.all(20),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
+                              width: 120,
+                              height: 120,
+                              decoration: const BoxDecoration(
+                                color: Color(0xFF5C7C6F), // deepSageGreen
                                 shape: BoxShape.circle,
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: const Color(
-                                      0xFF94A3B8,
-                                    ).withOpacity(0.1),
-                                    blurRadius: 30,
-                                    offset: const Offset(0, 10),
-                                  ),
-                                ],
                               ),
-                              child: const Icon(
-                                Icons.health_and_safety_rounded,
-                                size: 60,
-                                color: Color.fromARGB(255, 77, 144, 225),
+                              child: const Center(
+                                child: Icon(
+                                  Icons.eco_rounded,
+                                  size: 60,
+                                  color: Colors.white,
+                                ),
                               ),
                             ),
                             const SizedBox(height: 20),
                             Text(
-                              'MOTION  PLUS CONNECT',
+                              'OLEVEO',
                               style: GoogleFonts.outfit(
                                 fontSize: 26,
                                 fontWeight: FontWeight.w800,
@@ -307,6 +337,9 @@ class _SelectionPageState extends State<SelectionPage> {
                 },
               ),
             ),
+            ],
+            ),
+            ),
           ],
         ),
       ),
@@ -333,15 +366,7 @@ class _SelectionPageState extends State<SelectionPage> {
             decoration: BoxDecoration(
               color: Colors.white.withOpacity(0.15),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.white.withOpacity(0.2), width: 1.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 15,
-                  spreadRadius: 2,
-                  offset: const Offset(0, 6),
-                ),
-              ],
+              border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1.5),
             ),
             child: Row(
               children: [

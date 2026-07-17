@@ -90,14 +90,21 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       }, includeAuth: false);
 
       if (response != null) {
+        if (response['token'] != null) {
+          await ApiService.saveToken(response['token']);
+        }
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
-              content: Text('Registration Successful! Please Login.'),
+              content: Text('Registration Successful!'),
               backgroundColor: Color(0xFF10B981),
             ),
           );
-          Navigator.pop(context);
+          if (response['token'] != null) {
+            await AuthService.handleRedirection(context, portal: 'patient');
+          } else {
+            Navigator.pop(context);
+          }
         }
       }
     } catch (e) {
@@ -351,7 +358,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
       ),
       child: TextField(
         controller: controller,
@@ -399,7 +406,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
+        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
       ),
       child: DropdownButtonFormField2<String>(
         valueListenable: ValueNotifier(_selectedClinicId),
@@ -438,8 +445,10 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
         ),
         dropdownStyleData: DropdownStyleData(
           maxHeight: 250,
+          elevation: 0,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
             color: Colors.white,
           ),
         ),

@@ -4,6 +4,11 @@ const cors = require('cors');
 const http = require('http');
 const { Server } = require('socket.io');
 const connectDB = require('./config/db');
+const firebaseAdmin = require('./firebaseAdmin');
+
+// Initialize Firebase
+firebaseAdmin.initializeFirebase();
+
 const authRouter = require('./routers/authRouter');
 const clinicRouter = require('./routers/clinicRouter');
 const settingRouter = require('./routers/settingRouter');
@@ -19,15 +24,21 @@ const patient_documentsRouter = require('./routers/patient_documentsRouter');
 const patient_media_filesRouter = require('./routers/patient_media_filesRouter');
 const accessRequestRouter = require('./routers/accessRequestRouter');
 const sessionRouter = require('./routers/sessionRouter');
+const notificationRouter = require('./routers/notificationRouter');
+const messageRouter = require('./routers/messageRoutes');
+const firstAidRouter = require('./routers/firstAidRoutes');
+const aiRouter = require('./routers/aiRouter');
 
 // Connect to MongoDB
+
 connectDB();
 
 const app = express();
 
 // Middleware
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ limit: '50mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRouter);
@@ -45,6 +56,10 @@ app.use('/api/patient_documents', patient_documentsRouter);
 app.use('/api/patient_media_files', patient_media_filesRouter);
 app.use('/api/access-requests', accessRequestRouter);
 app.use('/api/sessions', sessionRouter);
+app.use('/api/notifications', notificationRouter);
+app.use('/api/messages', messageRouter);
+app.use('/api/first-aid', firstAidRouter);
+app.use('/api/ai', aiRouter);
 
 const server = http.createServer(app);
 const io = new Server(server, {
@@ -55,7 +70,13 @@ const io = new Server(server, {
 });
 
 io.on('connection', (socket) => {
-    console.log('A user connected:', socket.id);
+    const userId = socket.handshake.query.userId;
+    if (userId) {
+        socket.join(userId);
+        console.log(`User ${userId} joined socket room`);
+    } else {
+        console.log('A user connected without userId:', socket.id);
+    }
     
     socket.on('disconnect', () => {
         console.log('User disconnected:', socket.id);

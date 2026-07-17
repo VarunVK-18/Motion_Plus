@@ -7,13 +7,17 @@ const getProfiles = async (req, res) => {
     try {
         const query = {};
         if (req.query.role) {
-            query.role = req.query.role;
+            if (req.query.role === 'therapist_assistant') {
+                query.role = { $in: ['therapist', 'therapist_assistant'] };
+            } else {
+                query.role = req.query.role;
+            }
         }
         if (req.query.clinic_id) {
             query.clinic_id = req.query.clinic_id;
         }
         if (req.query.specialization) {
-            query.specialization = req.query.specialization;
+            query.specialization = { $regex: new RegExp(`^${req.query.specialization}$`, 'i') };
         }
         
         // Populate clinic_id if needed to get clinic details automatically
@@ -22,7 +26,27 @@ const getProfiles = async (req, res) => {
                                       .populate('clinic_id', 'name'); 
         res.json(profiles);
     } catch (error) {
-        res.status(500).json({ message: 'Server error fetching profiles' });
+        console.error('Error fetching profiles:', error);
+        res.status(500).json({ message: 'Server error fetching profiles', error: error.message });
+    }
+};
+
+// @desc    Get current user or specific user
+// @route   GET /api/profiles/me or /api/profiles/:id
+// @access  Private
+const getProfile = async (req, res) => {
+    try {
+        let profileId = req.params.id;
+        if (profileId === 'me') {
+            profileId = req.user._id;
+        }
+        const profile = await Profile.findById(profileId).populate('clinic_id', 'name');
+        if (!profile) {
+            return res.status(404).json({ message: 'Profile not found' });
+        }
+        res.json(profile);
+    } catch (error) {
+        res.status(500).json({ message: 'Server error fetching profile' });
     }
 };
 
@@ -55,6 +79,7 @@ const updateProfile = async (req, res) => {
 
 module.exports = {
     getProfiles,
+    getProfile,
     deleteProfile,
     updateProfile
 };

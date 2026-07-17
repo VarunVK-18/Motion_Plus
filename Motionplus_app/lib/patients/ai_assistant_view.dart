@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:shared_preferences/shared_preferences.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
-import 'package:hugeicons/hugeicons.dart' as hi;
+import '../services/api_service.dart';
 
 class AIAssistantView extends StatefulWidget {
   final bool showAppBar;
@@ -18,43 +16,17 @@ class _AIAssistantViewState extends State<AIAssistantView> {
   static const Color darkSlate = Color(0xFF2F3437);
   static const Color softSlate = Color(0xFF94A3B8);
 
-  // TODO: Replace with your actual Gemini API Key
-  final String _apiKey = 'YOUR_API_KEY_HERE';
-  
   bool _isLoading = false;
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
-  
-  ChatSession? _chatSession;
   final List<Map<String, dynamic>> _messages = [];
+
+  // Unique session ID so the backend keeps this chat's history separate
+  final String _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
 
   @override
   void initState() {
     super.initState();
-    _initializeChat();
-  }
-
-  void _initializeChat() {
-    if (_apiKey.isEmpty) return;
-    
-    final model = GenerativeModel(
-      model: 'gemini-1.5-pro',
-      apiKey: _apiKey,
-      systemInstruction: Content.system('''You are OLEVEO AI Assistant, an educational physiotherapy companion.
-You provide general guidance on topics like back pain, posture, hot/cold packs, stretching, and wellness.
-
-RULES:
-- You must NEVER diagnose conditions.
-- You must NEVER prescribe treatments.
-- You must NEVER recommend personalized treatments.
-- You must NEVER replace a therapist's advice.
-
-If a user asks for anything violating these rules, you MUST reply EXACTLY with:
-"I can provide general education, but please consult your therapist for personalized advice."'''),
-    );
-    
-    _chatSession = model.startChat();
-    
     setState(() {
       _messages.add({
         'isUser': false,
@@ -65,29 +37,28 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
 
   Future<void> _sendMessage() async {
     final text = _chatController.text.trim();
-    if (text.isEmpty) return;
-    
-    if (_chatSession == null) {
-      _initializeChat();
-      if (_chatSession == null) return;
-    }
+    if (text.isEmpty || _isLoading) return;
 
     setState(() {
       _messages.add({'isUser': true, 'text': text});
       _isLoading = true;
     });
-    
+
     _chatController.clear();
     _scrollToBottom();
 
     try {
-      final response = await _chatSession!.sendMessage(Content.text(text));
-      
+      final response = await ApiService.post(
+        '/ai/chat',
+        {'message': text, 'sessionId': _sessionId},
+        includeAuth: true,
+      );
+
       if (mounted) {
         setState(() {
           _messages.add({
             'isUser': false,
-            'text': response.text ?? 'Sorry, I could not generate a response.',
+            'text': response['reply'] ?? 'Sorry, I could not generate a response.',
           });
           _isLoading = false;
         });
@@ -98,7 +69,7 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
         setState(() {
           _messages.add({
             'isUser': false,
-            'text': 'Error connecting to AI: $e',
+            'text': 'Sorry, I could not connect to the AI right now. Please try again.',
           });
           _isLoading = false;
         });
@@ -128,16 +99,6 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
 
   @override
   Widget build(BuildContext context) {
-    final body = _apiKey.isEmpty
-        ? Center(
-            child: Text(
-              'API Key is missing',
-              textAlign: TextAlign.center,
-              style: GoogleFonts.outfit(color: darkSlate, fontSize: 16),
-            ),
-          )
-        : _buildChatInterface();
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: widget.showAppBar
@@ -154,7 +115,7 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
               iconTheme: const IconThemeData(color: darkSlate),
             )
           : null,
-      body: body,
+      body: _buildChatInterface(),
     );
   }
 
@@ -187,7 +148,11 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
     return Align(
       alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Container(
-        margin: EdgeInsets.only(bottom: 16, left: isUser ? 40.0 : 0.0, right: isUser ? 0.0 : 40.0),
+        margin: EdgeInsets.only(
+          bottom: 16,
+          left: isUser ? 40.0 : 0.0,
+          right: isUser ? 0.0 : 40.0,
+        ),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         decoration: BoxDecoration(
           color: isUser ? primaryColor : Colors.white,
@@ -217,7 +182,10 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
                 data: text,
                 styleSheet: MarkdownStyleSheet(
                   p: GoogleFonts.outfit(color: darkSlate, fontSize: 15),
-                  strong: GoogleFonts.outfit(color: darkSlate, fontWeight: FontWeight.bold),
+                  strong: GoogleFonts.outfit(
+                    color: darkSlate,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
       ),
@@ -251,9 +219,15 @@ If a user asks for anything violating these rules, you MUST reply EXACTLY with:
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: primaryColor.withOpacity(0.5), width: 1.5),
+                  borderSide: BorderSide(
+                    color: primaryColor.withOpacity(0.5),
+                    width: 1.5,
+                  ),
                 ),
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 14,
+                ),
               ),
               onSubmitted: (_) => _sendMessage(),
             ),
@@ -287,7 +261,8 @@ class _TypingIndicator extends StatefulWidget {
   State<_TypingIndicator> createState() => _TypingIndicatorState();
 }
 
-class _TypingIndicatorState extends State<_TypingIndicator> with SingleTickerProviderStateMixin {
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
   late AnimationController _controller;
 
   @override
