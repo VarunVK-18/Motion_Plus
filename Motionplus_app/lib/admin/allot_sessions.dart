@@ -152,7 +152,7 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
                           vertical: 6,
                         ),
                         leading: CircleAvatar(
-                          backgroundColor: primaryGreen.withOpacity(0.1),
+                          backgroundColor: primaryGreen.withValues(alpha: 0.1),
                           child: Text(
                             (t['full_name'] ?? 'T')[0].toUpperCase(),
                             style: GoogleFonts.outfit(
@@ -378,33 +378,31 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
                               'session_count': sessionCount,
                             }, includeAuth: true);
 
-                            if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Staff & Schedule Successfully Allotted!',
-                                  ),
-                                  backgroundColor: primaryGreen,
-                                  behavior: SnackBarBehavior.floating,
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Staff & Schedule Successfully Allotted!',
                                 ),
-                              );
-                              setState(() {});
-                            }
+                                backgroundColor: primaryGreen,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                            setState(() {});
                           } catch (e) {
                             debugPrint('Allotment Error: $e');
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Error: $e'),
-                                  backgroundColor: const Color(0xFFBE123C),
-                                  behavior: SnackBarBehavior.floating,
-                                  duration: const Duration(seconds: 5),
-                                ),
-                              );
-                            }
+                            if (!context.mounted) return;
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error: $e'),
+                                backgroundColor: const Color(0xFFBE123C),
+                                behavior: SnackBarBehavior.floating,
+                                duration: const Duration(seconds: 5),
+                              ),
+                            );
                           } finally {
-                            if (mounted) {
+                            if (context.mounted) {
                               setModalState(() => isConfirming = false);
                             }
                           }
@@ -565,53 +563,72 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
         final sessions = snapshot.data as List<dynamic>;
 
         if (sessions.isEmpty) {
-          return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: softSage,
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    statusFilter == 'pending'
-                        ? Icons.verified_rounded
-                        : Icons.calendar_today_rounded,
-                    size: 48,
-                    color: primaryGreen,
-                  ),
+          return RefreshIndicator(
+            onRefresh: () async {
+              await _fetchCounts();
+              setState(() {});
+            },
+            color: primaryGreen,
+            child: SingleChildScrollView(
+              physics: const AlwaysScrollableScrollPhysics(),
+              child: Container(
+                height: MediaQuery.of(context).size.height * 0.6,
+                alignment: Alignment.center,
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(20),
+                      decoration: const BoxDecoration(
+                        color: softSage,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        statusFilter == 'pending'
+                            ? Icons.verified_rounded
+                            : Icons.calendar_today_rounded,
+                        size: 48,
+                        color: primaryGreen,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      statusFilter == 'pending'
+                          ? 'Queue Cleared'
+                          : 'No New Bookings',
+                      style: GoogleFonts.outfit(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF1E293B),
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      statusFilter == 'pending'
+                          ? 'All clinic requests have been allotted.'
+                          : 'No online appointment requests found.',
+                      style: GoogleFonts.outfit(
+                        color: slate,
+                        fontWeight: FontWeight.w500,
+                        fontSize: 13,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  statusFilter == 'pending'
-                      ? 'Queue Cleared'
-                      : 'No New Bookings',
-                  style: GoogleFonts.outfit(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF1E293B),
-                  ),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  statusFilter == 'pending'
-                      ? 'All clinic requests have been allotted.'
-                      : 'No online appointment requests found.',
-                  style: GoogleFonts.outfit(
-                    color: slate,
-                    fontWeight: FontWeight.w500,
-                    fontSize: 13,
-                  ),
-                ),
-              ],
+              ),
             ),
           );
         }
 
-        return ListView.builder(
-          padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+        return RefreshIndicator(
+          onRefresh: () async {
+            await _fetchCounts();
+            setState(() {});
+          },
+          color: primaryGreen,
+          child: ListView.builder(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 100),
+            physics: const AlwaysScrollableScrollPhysics(),
           itemCount: sessions.length,
           itemBuilder: (context, index) {
             final session = sessions[index];
@@ -651,7 +668,7 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
                 border: Border.all(color: const Color(0xFFF1F5F9)),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.02),
+                    color: Colors.black.withValues(alpha: 0.02),
                     blurRadius: 15,
                     offset: const Offset(0, 8),
                   ),
@@ -744,6 +761,28 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
                                         color: const Color(0xFF1E293B),
                                       ),
                                     ),
+                                    if (session['specialization_required'] != null)
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Row(
+                                          children: [
+                                            const Icon(
+                                              Icons.medical_services_outlined,
+                                              size: 12,
+                                              color: Color(0xFF64748B),
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Text(
+                                              session['specialization_required'].toString().toUpperCase(),
+                                              style: GoogleFonts.outfit(
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.w600,
+                                                color: const Color(0xFF64748B),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
                                     if (session['location'] != null)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
@@ -877,10 +916,11 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
               ),
             );
           },
-        );
-      },
-    );
-  }
+        ),
+      );
+    },
+  );
+}
 
   Future<void> _makeCall(String phoneNumber) async {
     final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
@@ -918,10 +958,9 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
               final newFee = double.tryParse(controller.text);
               if (newFee != null) {
                 await ApiService.put('/sessions/$sessionId', {'fee_charged': newFee}, includeAuth: true);
-                if (mounted) {
-                  Navigator.pop(context);
-                  setState(() {});
-                }
+                if (!context.mounted) return;
+                Navigator.pop(context);
+                setState(() {});
               }
             },
             style: ElevatedButton.styleFrom(backgroundColor: primaryGreen),

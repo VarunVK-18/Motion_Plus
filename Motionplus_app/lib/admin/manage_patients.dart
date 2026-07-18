@@ -142,7 +142,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                             ? Icons.person_search_rounded
                             : Icons.search_off_rounded,
                         size: 48,
-                        color: slate.withOpacity(0.15),
+                        color: slate.withValues(alpha: 0.15),
                       ),
                       const SizedBox(height: 14),
                       Text(
@@ -178,7 +178,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                       ),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.04),
+                          color: Colors.black.withValues(alpha: 0.04),
                           blurRadius: 12,
                           offset: const Offset(0, 4),
                         ),

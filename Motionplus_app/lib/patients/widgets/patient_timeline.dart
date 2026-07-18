@@ -4,9 +4,10 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../services/api_service.dart';
 import 'package:intl/intl.dart';
 import '../../shared/theme/app_theme.dart';
-import 'package:dropdown_button2/dropdown_button2.dart';
 import 'dart:io';
 import 'package:file_picker/file_picker.dart';
+import 'package:hugeicons/hugeicons.dart';
+
 class PatientTimeline extends StatefulWidget {
   final String patientId;
 
@@ -20,6 +21,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
   Map<String, dynamic>? _currentUser;
   List<Map<String, dynamic>> _events = [];
   bool _isLoading = true;
+  final Set<String> _expandedDates = {'Today'};
 
   @override
   void initState() {
@@ -58,6 +60,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
           'date': DateTime.parse(c['created_at']),
           'title': 'Morning Check-In: ${c['overall_day'] ?? 'Completed'}',
           'type': 'checkin',
+          'readiness': c['readiness_score'] ?? 0,
         });
       }
 
@@ -100,15 +103,19 @@ class _PatientTimelineState extends State<PatientTimeline> {
     }
   }
 
-  String _formatDate(DateTime date) {
+  String _formatDateHeader(DateTime date) {
     final now = DateTime.now();
     if (date.year == now.year && date.month == now.month && date.day == now.day) {
-      return 'Today, ${DateFormat('h:mm a').format(date)}';
+      return 'Today';
     }
     if (date.year == now.year && date.month == now.month && date.day == now.day - 1) {
-      return 'Yesterday, ${DateFormat('h:mm a').format(date)}';
+      return 'Yesterday';
     }
-    return DateFormat('MMM d, yyyy').format(date);
+    return DateFormat('MMMM d, yyyy').format(date);
+  }
+
+  String _formatTime(DateTime date) {
+    return DateFormat('h:mm a').format(date);
   }
 
   void _showUploadMediaDialog() {
@@ -165,7 +172,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
                   
                   // File type dropdown
                   DropdownButtonFormField<String>(
-                    value: fileType,
+                    initialValue: fileType,
                     isExpanded: true,
                     items: const [
                       DropdownMenuItem(value: 'pdf', child: Text('PDF Document')),
@@ -216,7 +223,7 @@ class _PatientTimelineState extends State<PatientTimeline> {
                     child: Container(
                       padding: const EdgeInsets.symmetric(vertical: 32, horizontal: 16),
                       decoration: BoxDecoration(
-                        color: selectedFile != null ? AppTheme.deepSageGreen.withOpacity(0.05) : Colors.grey.shade50,
+                        color: selectedFile != null ? AppTheme.deepSageGreen.withValues(alpha: 0.05) : Colors.grey.shade50,
                         border: Border.all(
                           color: selectedFile != null ? AppTheme.deepSageGreen : Colors.grey.shade300,
                           width: 2,
@@ -284,12 +291,12 @@ class _PatientTimelineState extends State<PatientTimeline> {
                                   throw Exception('Database rejected the insert. Row Level Security might be blocking it.');
                                 }
                                 
-                                if (mounted) {
-                                  Navigator.pop(context);
-                                  _fetchTimelineEvents(); // refresh
-                                }
+                                if (!context.mounted) return;
+                                Navigator.pop(context);
+                                _fetchTimelineEvents(); // refresh
                               } catch (e) {
                                 setState(() => isUploading = false);
+                                if (!context.mounted) return;
                                 ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                               }
                             },
@@ -323,99 +330,226 @@ class _PatientTimelineState extends State<PatientTimeline> {
       ));
     }
 
-    Widget listView = _events.isEmpty
-        ? Padding(
+    if (_events.isEmpty) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text('Timeline', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
+          const SizedBox(height: 16),
+          Padding(
             padding: const EdgeInsets.all(20.0),
             child: Text(
               'No events found.',
               style: GoogleFonts.outfit(color: Colors.grey),
             ),
-          )
-        : ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      itemCount: _events.length,
-      itemBuilder: (context, index) {
-        final event = _events[index];
-        final isLast = index == _events.length - 1;
+          ),
+        ],
+      );
+    }
 
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Timeline line & dot
-            Column(
-              children: [
-                Container(
-                  width: 16,
-                  height: 16,
-                  decoration: BoxDecoration(
-                    color: _getColorForType(event['type']!),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white, width: 2),
-                  ),
-                ),
-                if (!isLast)
-                  Container(
-                    width: 2,
-                    height: 50, // Fixed height for now
-                    color: Colors.grey.shade300,
-                  ),
-              ],
-            ),
-            const SizedBox(width: 16),
-            // Event Details
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      event['title']!,
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 16,
-                        color: AppTheme.charcoal,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _formatDate(event['date'] as DateTime),
-                      style: GoogleFonts.outfit(
-                        fontWeight: FontWeight.w500,
-                        fontSize: 13,
-                        color: AppTheme.softSlate,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        );
-      },
-    );
+    // Group events by date header
+    final groupedEvents = <String, List<Map<String, dynamic>>>{};
+    for (var event in _events) {
+      final dateString = _formatDateHeader(event['date'] as DateTime);
+      if (!groupedEvents.containsKey(dateString)) {
+        groupedEvents[dateString] = [];
+      }
+      groupedEvents[dateString]!.add(event);
+    }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text('Timeline', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.bold, color: AppTheme.charcoal)),
-        const SizedBox(height: 16),
-        listView,
+        const SizedBox(height: 24),
+        ...groupedEvents.entries.map((entry) {
+          final dateHeader = entry.key;
+          final eventsForDate = entry.value;
+
+              final isExpanded = _expandedDates.contains(dateHeader);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Date Header
+                  GestureDetector(
+                    onTap: () {
+                      setState(() {
+                        if (isExpanded) {
+                          _expandedDates.remove(dateHeader);
+                        } else {
+                          _expandedDates.add(dateHeader);
+                        }
+                      });
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 16.0),
+                      child: Row(
+                        children: [
+                          Text(
+                            dateHeader.toUpperCase(),
+                            style: GoogleFonts.outfit(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              color: AppTheme.softSlate,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Icon(
+                            isExpanded ? Icons.keyboard_arrow_up_rounded : Icons.keyboard_arrow_down_rounded,
+                            color: AppTheme.softSlate,
+                            size: 20,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  // Events for this date
+                  if (isExpanded)
+                    ...eventsForDate.asMap().entries.map((eventEntry) {
+                      final index = eventEntry.key;
+                      final event = eventEntry.value;
+                      final isLast = index == eventsForDate.length - 1;
+
+                      return IntrinsicHeight(
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Timeline connector
+                            Column(
+                              children: [
+                                Container(
+                                  width: 32,
+                                  height: 32,
+                                  decoration: const BoxDecoration(
+                                    color: Colors.transparent,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: _buildIconForType(
+                                    event['type']!,
+                                    _getColorForType(event['type']!),
+                                  ),
+                                ),
+                                if (!isLast)
+                                  Expanded(
+                                    child: Container(
+                                      width: 2,
+                                      color: Colors.grey.shade200,
+                                    ),
+                                  ),
+                              ],
+                            ),
+                            const SizedBox(width: 16),
+                            // Event Card
+                            Expanded(
+                              child: Padding(
+                                padding: const EdgeInsets.only(bottom: 24.0),
+                                child: _buildEventCard(event),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    }),
+              const SizedBox(height: 8), // Extra space between date groups
+            ],
+          );
+        }),
       ],
     );
+  }
+
+  Widget _buildEventCard(Map<String, dynamic> event) {
+    return InkWell(
+      onTap: () {
+        // Future: Handle taps (e.g. show document preview or session details)
+      },
+      borderRadius: BorderRadius.circular(16),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    event['title']!,
+                    style: GoogleFonts.outfit(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                      color: AppTheme.charcoal,
+                    ),
+                  ),
+                ),
+                Text(
+                  _formatTime(event['date'] as DateTime),
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                    color: AppTheme.softSlate,
+                  ),
+                ),
+              ],
+            ),
+            if (event['type'] == 'checkin') ...[
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: (event['readiness'] >= 80)
+                      ? Colors.green.shade50
+                      : (event['readiness'] >= 50)
+                          ? Colors.orange.shade50
+                          : Colors.red.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Text(
+                  'Readiness: ${event['readiness']}%',
+                  style: GoogleFonts.outfit(
+                    color: (event['readiness'] >= 80)
+                        ? Colors.green.shade700
+                        : (event['readiness'] >= 50)
+                            ? Colors.orange.shade700
+                            : Colors.red.shade700,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            ]
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildIconForType(String type, Color color) {
+    switch (type) {
+      case 'session':
+        return HugeIcon(icon: HugeIcons.strokeRoundedDumbbell02, color: color, size: 16);
+      case 'checkin':
+        return HugeIcon(icon: HugeIcons.strokeRoundedSunrise, color: color, size: 16);
+      case 'document':
+        return HugeIcon(icon: HugeIcons.strokeRoundedGoogleDoc, color: color, size: 16);
+      case 'registration':
+        return HugeIcon(icon: HugeIcons.strokeRoundedUserCircle02, color: color, size: 16);
+      default:
+        return Icon(Icons.circle, color: color, size: 16);
+    }
   }
 
   Color _getColorForType(String type) {
     switch (type) {
       case 'session':
-        return AppTheme.deepSageGreen; // Deep Sage Green
+        return AppTheme.deepSageGreen;
       case 'checkin':
-        return AppTheme.softOlive; // Soft Olive
+        return AppTheme.softOlive;
       case 'document':
-        return AppTheme.mutedGold; // Muted Gold
+        return AppTheme.mutedGold;
       case 'registration':
-        return AppTheme.softSlate; // Slate
+        return AppTheme.softSlate;
       default:
         return AppTheme.deepSageGreen;
     }

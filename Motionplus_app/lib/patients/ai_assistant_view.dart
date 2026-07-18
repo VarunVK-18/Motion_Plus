@@ -160,10 +160,10 @@ class _AIAssistantViewState extends State<AIAssistantView> {
             bottomRight: isUser ? const Radius.circular(4) : const Radius.circular(12),
             bottomLeft: isUser ? const Radius.circular(12) : const Radius.circular(4),
           ),
-          border: isUser ? null : Border.all(color: Colors.grey.withOpacity(0.15)),
+          border: isUser ? null : Border.all(color: Colors.grey.withValues(alpha: 0.15)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.03),
+              color: Colors.black.withValues(alpha: 0.03),
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -197,7 +197,7 @@ class _AIAssistantViewState extends State<AIAssistantView> {
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.withOpacity(0.1))),
+        border: Border(top: BorderSide(color: Colors.grey.withValues(alpha: 0.1))),
       ),
       child: Row(
         children: [
@@ -211,16 +211,16 @@ class _AIAssistantViewState extends State<AIAssistantView> {
                 fillColor: const Color(0xFFF8FAFC),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                  borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                  borderSide: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
                   borderSide: BorderSide(
-                    color: primaryColor.withOpacity(0.5),
+                    color: primaryColor.withValues(alpha: 0.5),
                     width: 1.5,
                   ),
                 ),
@@ -290,7 +290,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           width: 8,
           height: 8,
           decoration: BoxDecoration(
-            color: const Color(0xFF5C7C6F).withOpacity(0.3 + (val * 0.7)),
+            color: const Color(0xFF5C7C6F).withValues(alpha: 0.3 + (val * 0.7)),
             shape: BoxShape.circle,
           ),
         );
@@ -312,7 +312,7 @@ class _TypingIndicatorState extends State<_TypingIndicator>
           ),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),

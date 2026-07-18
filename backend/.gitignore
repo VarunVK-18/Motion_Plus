@@ -24,3 +24,6 @@ build/
 
 # Mac OS
 .DS_Store
+
+# Firebase Admin SDK key
+firebase-adminsdk.json

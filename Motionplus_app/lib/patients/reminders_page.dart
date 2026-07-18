@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import 'dart:convert';
+import '../services/api_service.dart';
 
 class ReminderTask {
   final String id;
@@ -284,7 +286,7 @@ class _RemindersPageState extends State<RemindersPage> {
                       child: CircularProgressIndicator(
                         value: _completionRate,
                         strokeWidth: 10,
-                        backgroundColor: teal.withOpacity(0.1),
+                        backgroundColor: teal.withValues(alpha: 0.1),
                         valueColor: const AlwaysStoppedAnimation<Color>(teal),
                         strokeCap: StrokeCap.round,
                       ),
@@ -360,7 +362,7 @@ class _RemindersPageState extends State<RemindersPage> {
                         Icon(
                           Icons.check_circle_outline_rounded,
                           size: 64,
-                          color: teal.withOpacity(0.2),
+                          color: teal.withValues(alpha: 0.2),
                         ),
                         const SizedBox(height: 16),
                         Text(
@@ -467,11 +469,27 @@ class _RemindersPageState extends State<RemindersPage> {
                   ),
                 ),
               ),
-              // Checkbox
               GestureDetector(
                 onTap: () {
                   setState(() => task.isCompleted = !task.isCompleted);
                   _saveTasks();
+                  
+                  // Sync to backend for contextual notifications
+                  if (task.isCompleted) {
+                    final today = DateFormat('yyyy-MM-dd').format(DateTime.now());
+                    final title = task.title.toLowerCase();
+                    if (title.contains('water')) {
+                      ApiService.post('/daily-stats', {
+                        'date': today,
+                        'water_glasses': 4 // Treat one completion as hitting the minimum goal
+                      }, includeAuth: true).catchError((e) => debugPrint('Error syncing water: $e'));
+                    } else if (title.contains('exercise') || task.category.toLowerCase() == 'exercise') {
+                      ApiService.post('/daily-stats', {
+                        'date': today,
+                        'exercises_completed': true
+                      }, includeAuth: true).catchError((e) => debugPrint('Error syncing exercises: $e'));
+                    }
+                  }
                 },
                 child: Container(
                   width: 60,

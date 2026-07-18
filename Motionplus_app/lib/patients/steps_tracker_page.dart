@@ -6,6 +6,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:intl/intl.dart';
 import 'dart:async';
 import 'package:hugeicons/hugeicons.dart';
+import '../services/api_service.dart';
 
 class StepsTrackerPage extends StatefulWidget {
   const StepsTrackerPage({super.key});
@@ -212,11 +213,26 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
     }
 
     if (!mounted) return;
+    final int newSteps = sensorTotalSteps - (_baselineSteps ?? sensorTotalSteps);
     setState(() {
-      _todaySteps = sensorTotalSteps - (_baselineSteps ?? sensorTotalSteps);
+      _todaySteps = newSteps;
     });
     // Save for dashboard sync
     await prefs.setInt('last_known_steps', _todaySteps);
+
+    // Sync to backend occasionally (e.g. every 50 steps)
+    final lastSyncedSteps = prefs.getInt('last_synced_steps') ?? 0;
+    if (_todaySteps - lastSyncedSteps >= 50 || _todaySteps < lastSyncedSteps) {
+      prefs.setInt('last_synced_steps', _todaySteps);
+      try {
+        await ApiService.post('/daily-stats', {
+          'date': today,
+          'steps': _todaySteps
+        }, includeAuth: true);
+      } catch (e) {
+        debugPrint('Error syncing steps: $e');
+      }
+    }
   }
 
   void _onPedestrianStatusChanged(PedestrianStatus event) {
@@ -280,7 +296,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
-                    color: orange.withOpacity(0.1),
+                    color: orange.withValues(alpha: 0.1),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -297,7 +313,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                         child: CircularProgressIndicator(
                           value: progress,
                           strokeWidth: 15,
-                          backgroundColor: orange.withOpacity(0.1),
+                          backgroundColor: orange.withValues(alpha: 0.1),
                           color: orange,
                           strokeCap: StrokeCap.round,
                         ),
@@ -327,7 +343,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: orange.withOpacity(0.1),
+                              color: orange.withValues(alpha: 0.1),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -445,7 +461,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                           Container(
                             padding: const EdgeInsets.all(8),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF64748B).withOpacity(0.1),
+                              color: const Color(0xFF64748B).withValues(alpha: 0.1),
                               shape: BoxShape.circle,
                             ),
                             child: const HugeIcon(
@@ -498,7 +514,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
         border: Border.all(color: const Color(0xFFF1F5F9)),
         boxShadow: [
           BoxShadow(
-            color: indigo.withOpacity(0.05),
+            color: indigo.withValues(alpha: 0.05),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -552,7 +568,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                           boxShadow: isSelected
                               ? [
                                   BoxShadow(
-                                    color: indigo.withOpacity(0.3),
+                                    color: indigo.withValues(alpha: 0.3),
                                     blurRadius: 8,
                                     offset: const Offset(0, 4),
                                   ),
@@ -591,7 +607,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                     child: CircularProgressIndicator(
                       value: avgPercent,
                       strokeWidth: 8,
-                      backgroundColor: indigo.withOpacity(0.1),
+                      backgroundColor: indigo.withValues(alpha: 0.1),
                       color: indigo,
                       strokeCap: StrokeCap.round,
                     ),
@@ -652,7 +668,7 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
                       child: LinearProgressIndicator(
                         value: progress,
                         minHeight: 12,
-                        backgroundColor: indigo.withOpacity(0.1),
+                        backgroundColor: indigo.withValues(alpha: 0.1),
                         color: indigo,
                       ),
                     ),

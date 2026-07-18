@@ -328,7 +328,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 16),
                     child: Divider(
-                      color: Theme.of(context).dividerColor.withOpacity(0.05),
+                      color: Theme.of(context).dividerColor.withValues(alpha: 0.05),
                     ),
                   ),
                   _buildDrawerItem(
@@ -374,7 +374,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
+              color: Colors.white.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: const Icon(
@@ -490,15 +490,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : const Color(0xFFE2E8F0),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.2)
-                    : const Color(0xFF0F172A).withOpacity(0.08),
+                    ? Colors.black.withValues(alpha: 0.2)
+                    : const Color(0xFF0F172A).withValues(alpha: 0.08),
                 blurRadius: 24,
                 offset: const Offset(0, 12),
               ),
@@ -510,7 +510,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               Container(
                 padding: const EdgeInsets.all(10),
                 decoration: BoxDecoration(
-                  color: color.withOpacity(0.1),
+                  color: color.withValues(alpha: 0.1),
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: _renderIcon(icon, color, 20),
@@ -531,7 +531,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   fontWeight: FontWeight.w500,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -566,7 +566,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
               borderRadius: BorderRadius.circular(24),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withOpacity(0.12),
+                  color: const Color(0xFF0F172A).withValues(alpha: 0.12),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -577,7 +577,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: Colors.white.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: _renderIcon(
@@ -611,7 +611,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 ),
                 HugeIcon(
                   icon: HugeIcons.strokeRoundedArrowRight01,
-                  color: Colors.white.withOpacity(0.5),
+                  color: Colors.white.withValues(alpha: 0.5),
                   size: 20,
                 ),
               ],
@@ -648,15 +648,15 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : const Color(0xFFE2E8F0),
               width: 1.5,
             ),
             boxShadow: [
               BoxShadow(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.black.withOpacity(0.1)
-                    : const Color(0xFF0F172A).withOpacity(0.06),
+                    ? Colors.black.withValues(alpha: 0.1)
+                    : const Color(0xFF0F172A).withValues(alpha: 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -702,11 +702,9 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                 );
               }
 
-              return ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 400),
-                child: ListView.builder(
+              return ListView.builder(
                   shrinkWrap: true,
-                  physics: const BouncingScrollPhysics(),
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: activities.length,
                   itemBuilder: (context, index) {
                   final activity = activities[index];
@@ -729,7 +727,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                         leading: Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: _getStatusColor(status).withOpacity(0.1),
+                            color: _getStatusColor(status).withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: Icon(
@@ -752,7 +750,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             fontSize: 12,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                         trailing: Text(
@@ -761,20 +759,19 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                             fontSize: 11,
                             color: Theme.of(
                               context,
-                            ).colorScheme.onSurface.withOpacity(0.6),
+                            ).colorScheme.onSurface.withValues(alpha: 0.6),
                           ),
                         ),
                       ),
                       if (index < activities.length - 1)
                         Divider(
                           height: 1,
-                          color: Theme.of(context).dividerColor.withOpacity(0.5),
+                          color: Theme.of(context).dividerColor.withValues(alpha: 0.5),
                         ),
                     ],
                   );
                 },
-              ),
-            );
+              );
           },
           ),
         ),
@@ -936,7 +933,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
       brightness: Brightness.dark,
       scaffoldBackgroundColor: const Color(0xFF020617),
       cardColor: const Color(0xFF0F172A),
-      dividerColor: Colors.white.withOpacity(0.1),
+      dividerColor: Colors.white.withValues(alpha: 0.1),
       appBarTheme: const AppBarTheme(
         backgroundColor: Color(0xFF020617),
         elevation: 0,
@@ -1040,7 +1037,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
           'Are you sure you want to log out of your super admin portal?',
           style: GoogleFonts.outfit(
             fontSize: 14,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
         actions: [

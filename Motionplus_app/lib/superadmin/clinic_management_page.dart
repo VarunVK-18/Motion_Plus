@@ -100,7 +100,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: Text('Cancel', style: GoogleFonts.outfit(color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6))),
+              child: Text('Cancel', style: GoogleFonts.outfit(color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6))),
             ),
             ElevatedButton(
               onPressed: _isLoading ? null : _addClinic,
@@ -129,7 +129,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
         decoration: InputDecoration(
           hintText: hint,
           hintStyle: GoogleFonts.outfit(
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.4),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.4),
           ),
           prefixIcon: Icon(
             icon,
@@ -138,7 +138,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
           ),
           filled: true,
           fillColor: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.03)
+              ? Colors.white.withValues(alpha: 0.03)
               : const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
@@ -148,7 +148,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
             borderRadius: BorderRadius.circular(12),
             borderSide: BorderSide(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.05)
+                  ? Colors.white.withValues(alpha: 0.05)
                   : const Color(0xFFE2E8F0),
             ),
           ),
@@ -183,7 +183,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withOpacity(0.5)),
+                  Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withValues(alpha: 0.5)),
                   const SizedBox(height: 16),
                   Text(
                     'Connection Error',
@@ -191,7 +191,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
                   ),
                   Text(
                     'Please check your internet or backend',
-                    style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                   TextButton(onPressed: _loadClinics, child: const Text('Retry'))
                 ],
@@ -201,7 +201,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
           }
-          final clinics = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
+          final clinics = (snapshot.data)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
           if (clinics.isEmpty) return _buildEmptyState();
           
           return ListView.builder(
@@ -225,12 +225,12 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.1)
+              ? Colors.white.withValues(alpha: 0.1)
               : const Color(0xFFF1F5F9),
         ),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, 4),
           ),
@@ -241,7 +241,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
         leading: Container(
           padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.primary.withOpacity(0.1),
+            color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(12),
           ),
           child: Icon(Icons.business_rounded, color: Theme.of(context).colorScheme.primary),
@@ -256,12 +256,12 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
             const SizedBox(height: 4),
             Row(
               children: [
-                Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                Icon(Icons.location_on_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     clinic['address'] ?? 'No address provided',
-                    style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                    style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                   ),
                 ),
               ],
@@ -269,11 +269,11 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(Icons.phone_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                Icon(Icons.phone_outlined, size: 14, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 const SizedBox(width: 4),
                 Text(
                   clinic['phone'] ?? 'No phone',
-                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -308,7 +308,7 @@ class _ClinicManagementPageState extends State<ClinicManagementPage> {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(Icons.business_outlined, size: 64, color: Colors.blue.withOpacity(0.1)),
+          Icon(Icons.business_outlined, size: 64, color: Colors.blue.withValues(alpha: 0.1)),
           const SizedBox(height: 16),
           Text('No Clinics Added Yet', style: GoogleFonts.outfit(fontSize: 18, fontWeight: FontWeight.w600, color: const Color(0xFF64748B))),
           const SizedBox(height: 24),

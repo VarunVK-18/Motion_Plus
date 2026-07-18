@@ -325,7 +325,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: primaryGreen.withOpacity(0.2),
+              color: primaryGreen.withValues(alpha: 0.2),
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -521,7 +521,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
                           vertical: 2,
                         ),
                         decoration: BoxDecoration(
-                          color: primaryGreen.withOpacity(0.08),
+                          color: primaryGreen.withValues(alpha: 0.08),
                           borderRadius: BorderRadius.circular(5),
                         ),
                         child: Text(
@@ -936,7 +936,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.06),
+                color: Colors.black.withValues(alpha: 0.06),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),

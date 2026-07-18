@@ -26,7 +26,7 @@ class SpecializationColors {
       );
     }
     return BoxDecoration(
-      color: getColor(spec).withOpacity(0.12),
+      color: getColor(spec).withValues(alpha: 0.12),
       borderRadius: BorderRadius.circular(6),
     );
   }

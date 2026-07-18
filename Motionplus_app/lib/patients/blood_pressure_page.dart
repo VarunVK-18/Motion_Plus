@@ -46,7 +46,7 @@ class BloodPressurePage extends StatelessWidget {
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
-                    color: brandColor.withOpacity(0.05),
+                    color: brandColor.withValues(alpha: 0.05),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -56,7 +56,7 @@ class BloodPressurePage extends StatelessWidget {
                 children: [
                   Icon(
                     Icons.favorite_outline_rounded,
-                    color: brandColor.withOpacity(0.2),
+                    color: brandColor.withValues(alpha: 0.2),
                     size: 80,
                   ),
                   const SizedBox(height: 24),

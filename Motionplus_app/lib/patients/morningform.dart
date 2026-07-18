@@ -160,7 +160,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -197,7 +197,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
       elevation: 0,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+        side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
       ),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -275,9 +275,9 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: primaryBlue.withOpacity(0.1),
+                      color: primaryBlue.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: primaryBlue.withOpacity(0.2)),
+                      border: Border.all(color: primaryBlue.withValues(alpha: 0.2)),
                     ),
                     child: Row(
                       children: [
@@ -288,7 +288,7 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
                             'How was your day yesterday? This helps us personalize your treatment.',
                             style: GoogleFonts.outfit(
                               fontSize: 14,
-                              color: primaryBlue.withOpacity(0.8),
+                              color: primaryBlue.withValues(alpha: 0.8),
                               fontWeight: FontWeight.w500,
                             ),
                           ),

@@ -6,8 +6,6 @@ import 'package:intl/intl.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:url_launcher/url_launcher.dart';
-import '../selection_page.dart';
 import '../notifications/notification_service.dart';
 import '../shared/chat_page.dart';
 import '../shared/specialization_colors.dart';
@@ -15,6 +13,7 @@ import 'steps_tracker_page.dart';
 import 'heart_rate_page.dart';
 import 'exercise_tracker_page.dart';
 import 'reminders_page.dart';
+import 'water_tracker_page.dart';
 import 'patientanalytics.dart';
 import 'package:hugeicons/hugeicons.dart' as hi;
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -60,6 +59,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
   int _stepGoal = 10000;
   int _lastBpm = 72;
   int _pendingReminders = 3;
+  int _waterGlasses = 0;
+  int _waterGoal = 8;
   Future<dynamic>? _sessionsStream;
   List<String> _selectedCards = [
     'Steps',
@@ -93,14 +94,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     final bool hasScheduled = prefs.getBool('reminders_scheduled_v2') ?? false;
     
     if (!hasScheduled) {
-      // 8 AM Morning Form Reminder
-      await NotificationService().scheduleDailyReminder(
-        id: 1, 
-        title: 'Morning Check-in', 
-        body: 'Good morning! Please fill out your daily morning form.', 
-        hour: 8, 
-        minute: 0
-      );
+      // 8 AM Morning Form Reminder removed, now handled dynamically.
 
       // 1 PM Water Intake Reminder
       await NotificationService().scheduleDailyReminder(
@@ -219,16 +213,23 @@ class _PatientDashboardState extends State<PatientDashboard> {
       _stepGoal = prefs.getInt('step_goal') ?? 10000;
       _lastBpm = prefs.getInt('last_known_bpm') ?? 72;
       _pendingReminders = prefs.getInt('pending_reminders') ?? 3;
+      _waterGlasses = prefs.getInt('water_today') ?? 0;
+      _waterGoal = prefs.getInt('water_goal') ?? 8;
 
       if (lastSavedDate == today) {
         _todaySteps = prefs.getInt('last_known_steps') ?? 0;
       } else {
         _todaySteps = 0;
       }
+      
+      final lastWaterDate = prefs.getString('last_water_date');
+      if (lastWaterDate != today) {
+        _waterGlasses = 0;
+      }
 
       _selectedCards =
           prefs.getStringList('dashboard_cards') ??
-          ['Steps', 'Heart Rate', 'Exercise Tracker', 'Reminders'];
+          ['Steps', 'Heart Rate', 'Water Tracker', 'Reminders'];
     });
   }
 
@@ -251,6 +252,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
     bool shouldShowForm = false;
     String? formSessionId;
 
+    // 1. Detect if any session has incremented count (treatment completed today)
     for (var s in allSessions) {
       final sessionId = s['id'].toString();
       final currentCompletedCount = s['completed_count'] ?? 0;
@@ -261,19 +263,34 @@ class _PatientDashboardState extends State<PatientDashboard> {
       if (currentCompletedCount > storedCount) {
         prefs.setInt('session_count_$sessionId', currentCompletedCount);
         prefs.setString('session_last_increment_date_$sessionId', todayStr);
-      }
-
-      // For testing and reliability: If they have any completed visits,
-      // and they haven't filled a morning form today, show it.
-      if (currentCompletedCount > 0) {
-        final lastMorningFormDateStr = prefs.getString('last_morning_form_date');
-        final skippedDateStr = prefs.getString('skipped_morning_form_date');
+        prefs.setString('last_completed_treatment_date', todayStr);
         
-        // Show if not filled today and not skipped today
-        if (lastMorningFormDateStr != todayStr && skippedDateStr != todayStr) {
+        // Schedule next day 6 AM notification via FCM
+        final scheduledDate = DateTime(now.year, now.month, now.day, 6, 0).add(const Duration(days: 1));
+        try {
+          await ApiService.post('/fcm-notifications/schedule-morning', {
+            'scheduled_time': scheduledDate.toIso8601String(),
+            'title': 'Morning Check-in',
+            'body': 'Good morning! Please fill out your daily morning form.'
+          }, includeAuth: true);
+        } catch (e) {
+          debugPrint('Failed to schedule FCM notification: $e');
+        }
+      }
+    }
+
+    // 2. Check if we should trigger the form
+    final lastCompletedStr = prefs.getString('last_completed_treatment_date');
+    if (lastCompletedStr != null) {
+      final lastCompletedDate = DateTime.parse(lastCompletedStr);
+      final triggerTime = DateTime(lastCompletedDate.year, lastCompletedDate.month, lastCompletedDate.day, 6, 0).add(const Duration(days: 1));
+      
+      if (now.isAfter(triggerTime)) {
+        final lastSubmittedStr = prefs.getString('morning_form_submitted_for_treatment_date');
+        // If not submitted for THIS treatment yet, show it
+        if (lastSubmittedStr != lastCompletedStr) {
           shouldShowForm = true;
-          formSessionId = sessionId;
-          break; // Show for at least one session
+          formSessionId = allSessions.isNotEmpty ? allSessions.first['id'].toString() : null;
         }
       }
     }
@@ -288,12 +305,13 @@ class _PatientDashboardState extends State<PatientDashboard> {
       );
       
       if (result == true) {
+        // Form submitted, mark for this treatment cycle
+        if (lastCompletedStr != null) {
+          prefs.setString('morning_form_submitted_for_treatment_date', lastCompletedStr);
+        }
         prefs.setString('last_morning_form_date', todayStr);
-        // Clear the trigger so it doesn't fire again for this specific increment
-        prefs.remove('session_last_increment_date_$formSessionId');
       } else {
-        // User closed the form without completing it
-        prefs.setString('skipped_morning_form_date', todayStr);
+        // If they skip or close, we don't save any skipped date so it pops up again on next login
       }
       _morningFormTriggered = false;
     }
@@ -314,7 +332,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
             borderRadius: BorderRadius.circular(16),
             boxShadow: [
               BoxShadow(
-                color: forestGreen.withOpacity(0.3),
+                color: forestGreen.withValues(alpha: 0.3),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),
@@ -336,7 +354,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                     Text(
                       'TREATMENT COMPLETED',
                       style: GoogleFonts.outfit(
-                        color: Colors.white.withOpacity(0.8),
+                        color: Colors.white.withValues(alpha: 0.8),
                         fontSize: 8,
                         fontWeight: FontWeight.w900,
                         letterSpacing: 1.5,
@@ -359,7 +377,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   _showFeedbackDialog(sessionId);
                 },
                 style: TextButton.styleFrom(
-                  backgroundColor: Colors.white.withOpacity(0.2),
+                  backgroundColor: Colors.white.withValues(alpha: 0.2),
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
@@ -503,7 +521,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         color: Colors.white,
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: const Offset(0, -5),
           ),
@@ -690,7 +708,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   border: Border.all(color: const Color(0xFFE2E8F0), width: 1),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     ),
@@ -703,7 +721,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: forestGreen.withOpacity(0.1),
+                            color: forestGreen.withValues(alpha: 0.1),
                             shape: BoxShape.circle,
                           ),
                           child: const Icon(
@@ -838,6 +856,18 @@ class _PatientDashboardState extends State<PatientDashboard> {
             MaterialPageRoute(builder: (context) => const RemindersPage()),
           ).then((_) => _loadVitals()),
         );
+      case 'Water Tracker':
+        return _buildVitalCard(
+          label: 'Water Tracker',
+          value: '$_waterGlasses / $_waterGoal',
+          subLabel: 'Glasses Today',
+          iconData: Icons.water_drop_outlined,
+          color: const Color(0xFF3B82F6), // primaryBlue
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const WaterTrackerPage()),
+          ).then((_) => _loadVitals()),
+        );
       case 'Blood Pressure':
         return _buildVitalCard(
           label: 'Blood Pressure',
@@ -869,7 +899,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           label: 'Oxygen Level',
           value: '98%',
           subLabel: 'Healthy SpO2',
-          iconData: Icons.water_drop_outlined,
+          iconData: Icons.air,
           color: const Color(0xFF0EA5E9),
           onTap: () => Navigator.push(
             context,
@@ -887,6 +917,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
       'Heart Rate',
       'Exercise Tracker',
       'Reminders',
+      'Water Tracker',
       'Blood Pressure',
       'Sleep Monitoring',
       'Oxygen Level',
@@ -941,7 +972,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       return ChoiceChip(
                         label: Text(card),
                         selected: isSelected,
-                        selectedColor: primaryBlue.withOpacity(0.1),
+                        selectedColor: primaryBlue.withValues(alpha: 0.1),
                         labelStyle: GoogleFonts.outfit(
                           color: isSelected ? primaryBlue : softSlate,
                           fontWeight: isSelected
@@ -983,7 +1014,8 @@ class _PatientDashboardState extends State<PatientDashboard> {
                                 tempSelected,
                               );
                               setState(() => _selectedCards = tempSelected);
-                              if (mounted) Navigator.pop(context);
+                              if (!context.mounted) return;
+                              Navigator.pop(context);
                             }
                           : null,
                       child: Text(
@@ -1024,7 +1056,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
           border: Border.all(color: const Color(0xFFE2E8F0), width: 1.5),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.08),
+              color: Colors.black.withValues(alpha: 0.08),
               blurRadius: 16,
               offset: const Offset(0, 8),
             ),
@@ -1047,7 +1079,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                   const SizedBox(width: 22, height: 22),
                 Icon(
                   Icons.arrow_forward_ios_rounded,
-                  color: softSlate.withOpacity(0.5),
+                  color: softSlate.withValues(alpha: 0.5),
                   size: 14,
                 ),
               ],
@@ -1165,7 +1197,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                         border: Border.all(color: const Color(0xFFF1F5F9)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             blurRadius: 4,
                             offset: const Offset(0, 2),
                           ),
@@ -1340,12 +1372,12 @@ class _PatientDashboardState extends State<PatientDashboard> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         decoration: BoxDecoration(
           color: isSelected
-              ? const Color(0xFF2D9CDB).withOpacity(0.05)
+              ? const Color(0xFF2D9CDB).withValues(alpha: 0.05)
               : Colors.white,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: isSelected
-                ? const Color(0xFF2D9CDB).withOpacity(0.2)
+                ? const Color(0xFF2D9CDB).withValues(alpha: 0.2)
                 : const Color(0xFFF1F5F9),
           ),
         ),
@@ -1406,7 +1438,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
         border: Border.all(color: const Color(0xFFE2E8F0), width: 1.2),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1429,7 +1461,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       vertical: 3,
                     ),
                     decoration: BoxDecoration(
-                      color: forestGreen.withOpacity(0.1),
+                      color: forestGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(6),
                     ),
                     child: Text(
@@ -1569,9 +1601,9 @@ class _PatientDashboardState extends State<PatientDashboard> {
                       width: double.infinity,
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: forestGreen.withOpacity(0.04),
+                        color: forestGreen.withValues(alpha: 0.04),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: forestGreen.withOpacity(0.1)),
+                        border: Border.all(color: forestGreen.withValues(alpha: 0.1)),
                       ),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1599,7 +1631,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                           Text(
                             'Your Feedback Has Been Submitted. Thank You For Your Response...',
                             style: GoogleFonts.outfit(
-                              color: darkSlate.withOpacity(0.8),
+                              color: darkSlate.withValues(alpha: 0.8),
                               fontSize: 11,
                               fontWeight: FontWeight.w600,
                               height: 1.5,
@@ -1849,7 +1881,7 @@ Feedback: ${feedbackController.text}
 """;
 
                           try {
-                            await ApiService.put('/sessions/' + sessionId.toString(), {'patient_feedback': formattedFeedback}, includeAuth: true);
+                            await ApiService.put('/sessions/$sessionId', {'patient_feedback': formattedFeedback}, includeAuth: true);
                             if (context.mounted) {
                               if (session != null) {
                                 session['patient_feedback'] = formattedFeedback;
@@ -2051,7 +2083,7 @@ Feedback: ${feedbackController.text}
                         ),
                         decoration: BoxDecoration(
                           color: selectedFilterRange != null
-                              ? forestGreen.withOpacity(0.1)
+                              ? forestGreen.withValues(alpha: 0.1)
                               : const Color(0xFFF1F5F9),
                           borderRadius: BorderRadius.circular(10),
                         ),
@@ -2145,7 +2177,7 @@ Feedback: ${feedbackController.text}
                               Icon(
                                 Icons.search_off_rounded,
                                 size: 48,
-                                color: softSlate.withOpacity(0.3),
+                                color: softSlate.withValues(alpha: 0.3),
                               ),
                               const SizedBox(height: 16),
                               Text(
@@ -2303,7 +2335,7 @@ Feedback: ${feedbackController.text}
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
         boxShadow: [
           BoxShadow(
-            color: forestGreen.withOpacity(0.25),
+            color: forestGreen.withValues(alpha: 0.25),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -2320,7 +2352,7 @@ Feedback: ${feedbackController.text}
                 style: GoogleFonts.outfit(
                   fontSize: 10,
                   fontWeight: FontWeight.w800,
-                  color: Colors.white.withOpacity(0.7),
+                  color: Colors.white.withValues(alpha: 0.7),
                   letterSpacing: 2,
                 ),
               ),
@@ -2351,12 +2383,12 @@ Feedback: ${feedbackController.text}
                     color: Colors.transparent,
                     shape: BoxShape.circle,
                     border: Border.all(
-                      color: Colors.white.withOpacity(0.4),
+                      color: Colors.white.withValues(alpha: 0.4),
                       width: 0.5,
                     ),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.1),
+                        color: Colors.black.withValues(alpha: 0.1),
                         blurRadius: 8,
                         offset: const Offset(0, 4),
                       ),
@@ -2496,7 +2528,7 @@ Feedback: ${feedbackController.text}
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(10),
         ),
         child: hi.HugeIcon(icon: icon, color: color, size: 18),
@@ -2515,10 +2547,10 @@ Feedback: ${feedbackController.text}
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F766E).withOpacity(0.15),
+            color: const Color(0xFF0F766E).withValues(alpha: 0.15),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -2533,7 +2565,7 @@ Feedback: ${feedbackController.text}
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -2564,7 +2596,7 @@ Feedback: ${feedbackController.text}
             'Manage and monitor caregiving activities.',
             style: GoogleFonts.outfit(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -2613,10 +2645,10 @@ Feedback: ${feedbackController.text}
           end: Alignment.bottomRight,
         ),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(color: Colors.white.withOpacity(0.12), width: 1.5),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.12), width: 1.5),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F766E).withOpacity(0.15),
+            color: const Color(0xFF0F766E).withValues(alpha: 0.15),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -2631,7 +2663,7 @@ Feedback: ${feedbackController.text}
               Container(
                 padding: const EdgeInsets.all(6),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.12),
+                  color: Colors.white.withValues(alpha: 0.12),
                   shape: BoxShape.circle,
                 ),
                 child: const hi.HugeIcon(
@@ -2662,7 +2694,7 @@ Feedback: ${feedbackController.text}
             'Select your preferred date and specialization.',
             style: GoogleFonts.outfit(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.7),
+              color: Colors.white.withValues(alpha: 0.7),
               fontWeight: FontWeight.w500,
             ),
           ),
@@ -2825,6 +2857,7 @@ Feedback: ${feedbackController.text}
                               border: Border.all(color: const Color(0xFFF1F5F9), width: 2),
                             ),
                             child: DropdownButtonFormField2<String>(
+                              isExpanded: true,
                               valueListenable: ValueNotifier(selectedLocationId),
                               items: clinicList.map((c) {
                                 return DropdownItem<String>(
@@ -2981,23 +3014,22 @@ Feedback: ${feedbackController.text}
 
                             // Assign patient to this clinic
                             if (selectedLocationId != null) {
-                              await ApiService.put('/profiles/' + userId.toString(), {
+                              await ApiService.put('/profiles/$userId', {
                                 'clinic_id': selectedLocationId,
                               }, includeAuth: true);
                             }
 
-                            if (mounted) {
-                              Navigator.pop(context);
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Appointment Requested Successfully!',
-                                  ),
-                                  backgroundColor: Color(0xFF10B981),
-                                  behavior: SnackBarBehavior.floating,
+                            if (!context.mounted) return;
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Appointment Requested Successfully!',
                                 ),
-                              );
-                            }
+                                backgroundColor: Color(0xFF10B981),
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
                           } catch (e) {
                             setModalState(() => isSubmitting = false);
                           }
@@ -3095,7 +3127,7 @@ Feedback: ${feedbackController.text}
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.04),
+                      color: Colors.black.withValues(alpha: 0.04),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -3278,12 +3310,12 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: type == 'ORTHO'
-            ? const Color(0xFFB45309).withOpacity(0.1)
+            ? const Color(0xFFB45309).withValues(alpha: 0.1)
             : type == 'NEURO'
-            ? const Color(0xFF2D6A4F).withOpacity(0.1)
+            ? const Color(0xFF2D6A4F).withValues(alpha: 0.1)
             : type == 'CARDIO'
-            ? const Color(0xFFBE123C).withOpacity(0.1)
-            : const Color(0xFF3E84DC).withOpacity(0.1),
+            ? const Color(0xFFBE123C).withValues(alpha: 0.1)
+            : const Color(0xFF3E84DC).withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(8),
       ),
       child: Text(
@@ -3314,7 +3346,7 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: hi.HugeIcon(icon: icon, size: 16, color: color),
@@ -3353,19 +3385,36 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
   Widget build(BuildContext context) {
     final session = widget.session;
     final spec = session['specialization_required'].toString().toUpperCase();
-    final therapistId = session['therapist_id'];
+    
+    final dynamic therapistData = session['therapist_id'];
+    String? resolvedTherapistId;
+    String? preloadedName;
+    String? preloadedStatus;
+
+    if (therapistData is Map) {
+      resolvedTherapistId = therapistData['id']?.toString();
+      preloadedName = therapistData['full_name'];
+      preloadedStatus = therapistData['clinical_status'];
+    } else if (therapistData != null) {
+      resolvedTherapistId = therapistData.toString();
+    }
+
+    final bool isAssigned = resolvedTherapistId != null;
     const Color orangeAccent = Color(0xFFEA580C);
     final bool isInProgress = session['status'] == 'in_progress';
 
     return FutureBuilder(
-      future: ApiService.get('/profiles/' + therapistId.toString(), includeAuth: true),
+      future: isAssigned 
+          ? ApiService.get('/profiles/$resolvedTherapistId', includeAuth: true) 
+          : Future.value(null),
       builder: (context, snapshot) {
-        final therapistName = snapshot.hasData
-            ? snapshot.data!['full_name']
-            : 'Assigning...';
-        final userEmail =
-            _currentUser?['email']?.split('@')[0].toUpperCase() ??
-            'YOU';
+        final therapistName = preloadedName ?? (snapshot.data?['full_name'] ?? (isAssigned ? 'Loading...' : 'Assigning...'));
+        final clinicalStatus = preloadedStatus ?? (snapshot.data?['clinical_status'] ?? 'AVAILABLE');
+        final String rawEmail = _currentUser?['email']?.toString() ?? '';
+        final userEmail = rawEmail.isNotEmpty ? rawEmail.split('@')[0] : 'You';
+        final String displayName = userEmail.isNotEmpty 
+            ? '${userEmail[0].toUpperCase()}${userEmail.substring(1).toLowerCase()}'
+            : 'You';
 
         return GestureDetector(
           onTap: () {
@@ -3382,7 +3431,7 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
               border: Border.all(color: const Color(0xFFE2E8F0), width: 0.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.04),
+                  color: Colors.black.withValues(alpha: 0.04),
                   blurRadius: 16,
                   offset: const Offset(0, 8),
                 ),
@@ -3411,8 +3460,8 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
                           ),
                           decoration: BoxDecoration(
                             color: isInProgress
-                                ? const Color(0xFFBE123C).withOpacity(0.1)
-                                : orangeAccent.withOpacity(0.1),
+                                ? const Color(0xFFBE123C).withValues(alpha: 0.1)
+                                : orangeAccent.withValues(alpha: 0.1),
                             borderRadius: BorderRadius.circular(6),
                           ),
                           child: Text(
@@ -3483,7 +3532,7 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
                                                               session['id']
                                                                   .toString(),
                                                           receiverId:
-                                                              therapistId,
+                                                              resolvedTherapistId ?? '',
                                                           receiverName:
                                                               therapistName,
                                                         ),
@@ -3515,23 +3564,16 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    snapshot.hasData
-                                        ? (snapshot.data!['clinical_status'] ??
-                                                  'AVAILABLE')
-                                              .toString()
-                                              .toUpperCase()
+                                    isAssigned
+                                        ? clinicalStatus.toString().toUpperCase()
                                         : 'PENDING',
                                     style: GoogleFonts.outfit(
-                                      color: snapshot.hasData
-                                          ? (snapshot.data!['clinical_status'] ==
-                                                    'Offline'
-                                                ? const Color(0xFF64748B)
-                                                : (snapshot.data!['clinical_status'] ==
-                                                          'On Therapy'
-                                                      ? const Color(0xFF3E84DC)
-                                                      : const Color(
-                                                          0xFF10B981,
-                                                        )))
+                                      color: isAssigned
+                                          ? (clinicalStatus == 'Offline'
+                                              ? const Color(0xFF64748B)
+                                              : (clinicalStatus == 'On Therapy'
+                                                  ? const Color(0xFF3E84DC)
+                                                  : const Color(0xFF10B981)))
                                           : const Color(0xFF94A3B8),
                                       fontSize: 10,
                                       fontWeight: FontWeight.w800,
@@ -3564,7 +3606,9 @@ class _PatientSessionCardState extends State<_PatientSessionCard> {
                                             CrossAxisAlignment.start,
                                         children: [
                                           Text(
-                                            '${userEmail[0].toUpperCase()}${userEmail.substring(1).toLowerCase()}, your ${spec.toLowerCase()} therapy is scheduled with $therapistName.',
+                                            isAssigned
+                                                ? '$displayName, your ${spec.toLowerCase()} therapy is scheduled with $therapistName.'
+                                                : '$displayName, your ${spec.toLowerCase()} therapy request is pending assignment.',
                                             style: GoogleFonts.outfit(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w500,

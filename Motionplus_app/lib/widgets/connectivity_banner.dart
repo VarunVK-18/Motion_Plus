@@ -16,7 +16,6 @@ class ConnectivityBanner extends StatefulWidget {
 class _ConnectivityBannerState extends State<ConnectivityBanner> {
   late StreamSubscription<List<ConnectivityResult>> _subscription;
   bool _isOffline = false;
-  bool _wasOffline = false;
 
   @override
   void initState() {
@@ -42,7 +41,6 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
       // Transitioning to offline
       setState(() {
         _isOffline = true;
-        _wasOffline = true;
       });
     } else if (!isOffline && _isOffline) {
       // Transitioning back to online
@@ -100,7 +98,7 @@ class _ConnectivityBannerState extends State<ConnectivityBanner> {
                   color: const Color(0xFFBE123C),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
+                      color: Colors.black.withValues(alpha: 0.2),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),

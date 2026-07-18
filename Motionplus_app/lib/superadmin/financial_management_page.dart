@@ -64,7 +64,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Theme.of(
             context,
-          ).colorScheme.onSurface.withOpacity(0.5),
+          ).colorScheme.onSurface.withValues(alpha: 0.5),
           indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.outfit(fontWeight: FontWeight.w600),
@@ -143,11 +143,10 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                 }, includeAuth: true);
                 if (mounted) setState(() {});
               } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Failed to update: $e')),
-                  );
-                }
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Failed to update: $e')),
+                );
               }
             },
             style: ElevatedButton.styleFrom(
@@ -243,14 +242,14 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.08)
+                ? Colors.white.withValues(alpha: 0.08)
                 : const Color(0xFFE2E8F0),
           ),
           boxShadow: [
             BoxShadow(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.black.withOpacity(0.2)
-                  : Colors.black.withOpacity(0.03),
+                  ? Colors.black.withValues(alpha: 0.2)
+                  : Colors.black.withValues(alpha: 0.03),
               blurRadius: 20,
               offset: const Offset(0, 8),
             ),
@@ -261,7 +260,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(icon, color: color, size: 24),
@@ -285,7 +284,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                       fontSize: 12,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -337,7 +336,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                       Icon(
                         Icons.wifi_off_rounded,
                         size: 48,
-                        color: Colors.redAccent.withOpacity(0.5),
+                        color: Colors.redAccent.withValues(alpha: 0.5),
                       ),
                       const SizedBox(height: 16),
                       Text(
@@ -353,7 +352,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                           fontSize: 12,
                           color: Theme.of(
                             context,
-                          ).colorScheme.onSurface.withOpacity(0.6),
+                          ).colorScheme.onSurface.withValues(alpha: 0.6),
                         ),
                       ),
                     ],
@@ -471,14 +470,14 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
           color: isSelected
               ? Theme.of(context).colorScheme.primary
               : Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFF1F5F9),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
             color: isSelected
                 ? Colors.transparent
                 : Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.12)
+                ? Colors.white.withValues(alpha: 0.12)
                 : Colors.transparent,
           ),
         ),
@@ -489,7 +488,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
             fontWeight: FontWeight.w700,
             color: isSelected
                 ? Colors.white
-                : Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ),
@@ -575,7 +574,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.2),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -589,7 +588,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
             style: GoogleFonts.outfit(
               fontSize: 10,
               fontWeight: FontWeight.w900,
-              color: Colors.white.withOpacity(0.6),
+              color: Colors.white.withValues(alpha: 0.6),
               letterSpacing: 1.5,
             ),
           ),
@@ -606,7 +605,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
             'Total earnings from all clinical records',
             style: GoogleFonts.outfit(
               fontSize: 11,
-              color: Colors.white.withOpacity(0.5),
+              color: Colors.white.withValues(alpha: 0.5),
             ),
           ),
         ],
@@ -622,14 +621,14 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -640,7 +639,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(14),
             ),
             child: Icon(icon, color: color, size: 20),
@@ -657,7 +656,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                     fontWeight: FontWeight.w600,
                     color: Theme.of(
                       context,
-                    ).colorScheme.onSurface.withOpacity(0.6),
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
                   ),
                 ),
                 Text(
@@ -709,14 +708,14 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFF1F5F9),
         ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -733,7 +732,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                   fontWeight: FontWeight.w700,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
@@ -753,7 +752,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
               value: total > 0 ? paid / total : 0,
               minHeight: 12,
               backgroundColor: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.05)
+                  ? Colors.white.withValues(alpha: 0.05)
                   : const Color(0xFFE2E8F0),
               valueColor: AlwaysStoppedAnimation<Color>(
                 rate > 80 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
@@ -771,7 +770,7 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
                   fontWeight: FontWeight.w600,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.5),
+                  ).colorScheme.onSurface.withValues(alpha: 0.5),
                 ),
               ),
               Text(

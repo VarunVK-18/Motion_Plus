@@ -49,7 +49,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
              return const Center(child: CircularProgressIndicator());
           }
 
-          final settingsList = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
+          final settingsList = (snapshot.data)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
           final settings = {
             for (var s in settingsList) s['key']: s['value'],
           };
@@ -105,7 +105,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
             style: GoogleFonts.outfit(
               fontSize: 11,
               fontWeight: FontWeight.w900,
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
               letterSpacing: 1.5,
             ),
           ),
@@ -116,12 +116,12 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
             borderRadius: BorderRadius.circular(24),
             border: Border.all(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : const Color(0xFFE2E8F0),
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 10,
                 offset: const Offset(0, 4),
               ),
@@ -160,7 +160,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
         subtitle,
         style: GoogleFonts.outfit(
           fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
       activeThumbColor: const Color(0xFF10B981),
@@ -192,7 +192,7 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
         subtitle,
         style: GoogleFonts.outfit(
           fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
         ),
       ),
       trailing: const Icon(

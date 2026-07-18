@@ -1,5 +1,6 @@
 const Session = require('../models/Session');
 const Profile = require('../models/Profile');
+const PatientAchievement = require('../models/PatientAchievement');
 const { sendPushNotification } = require('../firebaseAdmin');
 
 // @desc    Create a session
@@ -85,6 +86,26 @@ const updateSession = async (req, res) => {
                 } else if (updated.status === 'completed') {
                     title = 'Session Completed';
                     body = 'Your therapy session has been completed.';
+                    
+                    // Check for milestone
+                    if (updated.completed_count > 0 && updated.completed_count % 5 === 0) {
+                        const badgeName = `${updated.completed_count} Sessions Completed!`;
+                        const badgeIcon = '🏆';
+                        
+                        await sendPushNotification(
+                            patient.fcmTokens, 
+                            "Milestone Reached! 🎉", 
+                            `You've completed ${updated.completed_count} sessions! Keep up the great work!`, 
+                            { type: 'contextual' }
+                        );
+
+                        // Save the badge to the database
+                        await PatientAchievement.create({
+                            patient_id: updated.patient_id,
+                            badge_name: badgeName,
+                            badge_icon: badgeIcon,
+                        });
+                    }
                 }
 
                 if (title && body) {

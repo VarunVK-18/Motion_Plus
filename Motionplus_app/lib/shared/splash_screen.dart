@@ -123,7 +123,7 @@ class _SplashScreenState extends State<SplashScreen>
                   width: 120,
                   height: 120,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.2),
+                    color: Colors.white.withValues(alpha: 0.2),
                     shape: BoxShape.circle,
                   ),
                   child: const Center(
@@ -150,7 +150,7 @@ class _SplashScreenState extends State<SplashScreen>
                   style: GoogleFonts.outfit(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
-                    color: Colors.white.withOpacity(0.8),
+                    color: Colors.white.withValues(alpha: 0.8),
                     letterSpacing: 1.5,
                   ),
                 ),
@@ -178,7 +178,7 @@ class _SplashScreenState extends State<SplashScreen>
                         child: CircularProgressIndicator(
                           strokeWidth: 2.5,
                           valueColor: AlwaysStoppedAnimation<Color>(
-                            Colors.white.withOpacity(0.85),
+                            Colors.white.withValues(alpha: 0.85),
                           ),
                         ),
                       ),
@@ -191,7 +191,7 @@ class _SplashScreenState extends State<SplashScreen>
                           style: GoogleFonts.outfit(
                             fontSize: 13,
                             fontWeight: FontWeight.w400,
-                            color: Colors.white.withOpacity(0.65),
+                            color: Colors.white.withValues(alpha: 0.65),
                             letterSpacing: 0.5,
                           ),
                         ),

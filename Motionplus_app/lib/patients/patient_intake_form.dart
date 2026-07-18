@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
 import 'package:dropdown_button2/dropdown_button2.dart';
@@ -278,7 +277,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
                 label: Text(key),
                 selected: val,
                 onSelected: (selected) => setState(() => map[key] = selected),
-                selectedColor: primaryBlue.withOpacity(0.1),
+                selectedColor: primaryBlue.withValues(alpha: 0.1),
                 checkmarkColor: primaryBlue,
                 labelStyle: GoogleFonts.outfit(
                   color: val ? primaryBlue : darkSlate,
@@ -377,14 +376,14 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
           title: Text('Do you smoke?', style: GoogleFonts.outfit(fontSize: 14)),
           value: _smoking,
           onChanged: (val) => setState(() => _smoking = val),
-          activeColor: primaryBlue,
+          activeThumbColor: primaryBlue,
           contentPadding: EdgeInsets.zero,
         ),
         SwitchListTile(
           title: Text('Do you consume alcohol?', style: GoogleFonts.outfit(fontSize: 14)),
           value: _alcohol,
           onChanged: (val) => setState(() => _alcohol = val),
-          activeColor: primaryBlue,
+          activeThumbColor: primaryBlue,
           contentPadding: EdgeInsets.zero,
         ),
         _buildDropdown('Physical Activity', _physicalActivity, ['Sedentary', 'Moderate', 'Active'], (val) => setState(() => _physicalActivity = val!)),
@@ -393,7 +392,7 @@ class _PatientIntakeFormScreenState extends State<PatientIntakeFormScreen> {
           title: Text('Any falls in past 6 months?', style: GoogleFonts.outfit(fontSize: 14)),
           value: _fallsHistory,
           onChanged: (val) => setState(() => _fallsHistory = val),
-          activeColor: primaryBlue,
+          activeThumbColor: primaryBlue,
           contentPadding: EdgeInsets.zero,
         ),
         _buildDropdown('Assistive Device', _assistiveDevice, ['None', 'Walker', 'Stick', 'Crutches', 'Wheelchair', 'Orthosis'], (val) => setState(() => _assistiveDevice = val!)),

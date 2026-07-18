@@ -319,7 +319,7 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
                   boxShadow: isSelected
                       ? [
                           BoxShadow(
-                            color: const Color(0xFF2D6A4F).withOpacity(0.3),
+                            color: const Color(0xFF2D6A4F).withValues(alpha: 0.3),
                             blurRadius: 10,
                             offset: const Offset(0, 4),
                           ),
@@ -371,7 +371,7 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
         borderRadius: BorderRadius.circular(24),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.2),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.2),
             blurRadius: 20,
             offset: const Offset(0, 10),
           ),
@@ -409,14 +409,14 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
 
   Widget _overviewItem(String label, String value, IconData icon, Color color, {bool darkText = false}) {
     final titleColor = darkText ? const Color(0xFF0F172A) : Colors.white;
-    final subColor = darkText ? const Color(0xFF64748B) : Colors.white.withOpacity(0.5);
+    final subColor = darkText ? const Color(0xFF64748B) : Colors.white.withValues(alpha: 0.5);
 
     return Column(
       children: [
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.15),
+            color: color.withValues(alpha: 0.15),
             shape: BoxShape.circle,
           ),
           child: Icon(icon, color: color, size: 18),
@@ -613,7 +613,7 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
                     dotData: const FlDotData(show: true),
                     belowBarData: BarAreaData(
                       show: true,
-                      color: const Color(0xFF3B82F6).withOpacity(0.1),
+                      color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                     ),
                   ),
                 ],
@@ -820,7 +820,7 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
             borderRadius: BorderRadius.circular(10),
             child: LinearProgressIndicator(
               value: progress,
-              backgroundColor: color.withOpacity(0.1),
+              backgroundColor: color.withValues(alpha: 0.1),
               color: color,
               minHeight: 6,
             ),

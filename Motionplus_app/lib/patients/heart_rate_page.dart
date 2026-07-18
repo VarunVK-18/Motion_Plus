@@ -168,7 +168,7 @@ class _HeartRatePageState extends State<HeartRatePage> {
                 borderRadius: BorderRadius.circular(32),
                 boxShadow: [
                   BoxShadow(
-                    color: heartRed.withOpacity(0.05),
+                    color: heartRed.withValues(alpha: 0.05),
                     blurRadius: 30,
                     offset: const Offset(0, 10),
                   ),
@@ -181,7 +181,7 @@ class _HeartRatePageState extends State<HeartRatePage> {
                       children: [
                         Icon(
                           Icons.favorite_rounded,
-                          color: heartRed.withOpacity(0.2),
+                          color: heartRed.withValues(alpha: 0.2),
                           size: 80,
                         ),
                         const SizedBox(height: 24),
@@ -252,7 +252,7 @@ class _HeartRatePageState extends State<HeartRatePage> {
                           height: 200,
                           width: double.infinity,
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.02),
+                            color: Colors.black.withValues(alpha: 0.02),
                             borderRadius: BorderRadius.circular(24),
                           ),
                           child: ClipRRect(
@@ -276,7 +276,7 @@ class _HeartRatePageState extends State<HeartRatePage> {
                         const SizedBox(height: 24),
                         LinearProgressIndicator(
                           value: _progress,
-                          backgroundColor: heartRed.withOpacity(0.1),
+                          backgroundColor: heartRed.withValues(alpha: 0.1),
                           valueColor: const AlwaysStoppedAnimation<Color>(
                             heartRed,
                           ),

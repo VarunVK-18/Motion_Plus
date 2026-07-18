@@ -358,7 +358,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
       ),
       child: TextField(
         controller: controller,
@@ -406,7 +406,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
       ),
       child: DropdownButtonFormField2<String>(
         valueListenable: ValueNotifier(_selectedClinicId),
@@ -448,7 +448,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
           elevation: 0,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: Colors.grey.withOpacity(0.2), width: 1.0),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
             color: Colors.white,
           ),
         ),

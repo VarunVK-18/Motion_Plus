@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/api_service.dart';
-import '../auth/auth_service.dart';
 
 class PainBingoScreen extends StatefulWidget {
   const PainBingoScreen({super.key});
@@ -94,7 +93,7 @@ class _PainBingoScreenState extends State<PainBingoScreen> {
         ),
         backgroundColor: Colors.white,
         elevation: 1,
-        shadowColor: Colors.black.withOpacity(0.05),
+        shadowColor: Colors.black.withValues(alpha: 0.05),
         centerTitle: true,
       ),
       body: Padding(
@@ -124,10 +123,10 @@ class _PainBingoScreenState extends State<PainBingoScreen> {
                       decoration: BoxDecoration(
                         color: isSelected ? const Color(0xFFF87171) : Colors.white,
                         borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: isSelected ? const Color(0xFFDC2626) : Colors.grey.withOpacity(0.2), width: 2),
+                        border: Border.all(color: isSelected ? const Color(0xFFDC2626) : Colors.grey.withValues(alpha: 0.2), width: 2),
                         boxShadow: [
                           if (!isSelected)
-                            BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4, offset: const Offset(0, 2)),
+                            BoxShadow(color: Colors.black.withValues(alpha: 0.05), blurRadius: 4, offset: const Offset(0, 2)),
                         ],
                       ),
                       child: Center(

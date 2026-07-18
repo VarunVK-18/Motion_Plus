@@ -45,7 +45,7 @@ class _GlobalDataViewState extends State<GlobalDataView>
           controller: _tabController,
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor:
-              Theme.of(context).colorScheme.onSurface.withOpacity(0.5),
+              Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.5),
           indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.outfit(
@@ -77,7 +77,7 @@ class _GlobalDataViewState extends State<GlobalDataView>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withOpacity(0.5)),
+                Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 Text(
                   'Database Offline',
@@ -85,7 +85,7 @@ class _GlobalDataViewState extends State<GlobalDataView>
                 ),
                 Text(
                   'Check your connection to sync users',
-                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -120,14 +120,14 @@ class _GlobalDataViewState extends State<GlobalDataView>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -157,12 +157,12 @@ class _GlobalDataViewState extends State<GlobalDataView>
           user['email'] ?? 'No email provided',
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         trailing: Icon(
           Icons.chevron_right_rounded,
-          color: Theme.of(context).colorScheme.onSurface.withOpacity(0.3),
+          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.3),
         ),
         onTap: () {
           final role = user['role']?.toString().toLowerCase();
@@ -203,7 +203,7 @@ class _GlobalDataViewState extends State<GlobalDataView>
           Icon(
             Icons.group_off_rounded,
             size: 64,
-            color: Colors.indigo.withOpacity(0.1),
+            color: Colors.indigo.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
           Text(

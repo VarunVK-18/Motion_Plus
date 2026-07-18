@@ -111,8 +111,8 @@ class _SelectionPageState extends State<SelectionPage> {
                       width: double.infinity,
                       padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                       color: _serverConnected == null 
-                          ? const Color(0xFFF59E0B).withOpacity(0.9) // Warning yellow/orange
-                          : const Color(0xFFEF4444).withOpacity(0.9), // Error red
+                          ? const Color(0xFFF59E0B).withValues(alpha: 0.9) // Warning yellow/orange
+                          : const Color(0xFFEF4444).withValues(alpha: 0.9), // Error red
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -374,16 +374,16 @@ class _SelectionPageState extends State<SelectionPage> {
           child: Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.15),
+              color: Colors.white.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: Colors.grey.withOpacity(0.3), width: 1.5),
+              border: Border.all(color: Colors.grey.withValues(alpha: 0.3), width: 1.5),
             ),
             child: Row(
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: color.withOpacity(0.15),
+                    color: color.withValues(alpha: 0.15),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: icon is IconData

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'caregiver_dashboard.dart';
-import 'package:hugeicons/hugeicons.dart' as hi;
 
 class PatientDashboardView extends StatelessWidget {
   const PatientDashboardView({super.key});
@@ -77,7 +76,7 @@ class PatientDashboardView extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
-                    side: BorderSide(color: const Color(0xFF5C7C6F).withOpacity(0.3)),
+                    side: BorderSide(color: const Color(0xFF5C7C6F).withValues(alpha: 0.3)),
                   ),
                 ),
                 icon: const Icon(Icons.family_restroom_rounded, color: Color(0xFF5C7C6F)),
@@ -103,7 +102,7 @@ class PatientDashboardView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -118,7 +117,7 @@ class PatientDashboardView extends StatelessWidget {
           const SizedBox(height: 12),
           LinearProgressIndicator(
             value: value,
-            backgroundColor: color.withOpacity(0.1),
+            backgroundColor: color.withValues(alpha: 0.1),
             valueColor: AlwaysStoppedAnimation<Color>(color),
             minHeight: 12,
             borderRadius: BorderRadius.circular(6),
@@ -134,7 +133,7 @@ class PatientDashboardView extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4))],
+        boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -155,9 +154,9 @@ class PatientDashboardView extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: color.withOpacity(0.1),
+            color: color.withValues(alpha: 0.1),
             shape: BoxShape.circle,
-            border: Border.all(color: color.withOpacity(0.3), width: 2),
+            border: Border.all(color: color.withValues(alpha: 0.3), width: 2),
           ),
           child: Icon(icon, color: color, size: 32),
         ),

@@ -56,7 +56,7 @@ class _BluetoothScannerDialogState extends State<BluetoothScannerDialog> {
     try {
       await FlutterBluePlus.startScan(timeout: const Duration(seconds: 15));
     } catch (e) {
-      print("Start Scan Error: $e");
+      debugPrint("Start Scan Error: $e");
     }
   }
 
@@ -78,7 +78,7 @@ class _BluetoothScannerDialogState extends State<BluetoothScannerDialog> {
           await device.createBond();
         }
       } catch (e) {
-        print("Bonding error: $e");
+        debugPrint("Bonding error: $e");
       }
 
       // Discover services and subscribe to notifications to keep the connection alive
@@ -92,7 +92,7 @@ class _BluetoothScannerDialogState extends State<BluetoothScannerDialog> {
               // Listen to the stream so the data is consumed (keeps stream alive)
               characteristic.onValueReceived.listen((value) {});
             } catch (e) {
-              print("Failed to subscribe to characteristic: $e");
+              debugPrint("Failed to subscribe to characteristic: $e");
             }
           }
         }

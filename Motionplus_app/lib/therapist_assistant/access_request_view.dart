@@ -84,7 +84,7 @@ class _AccessRequestViewState extends State<AccessRequestView> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF4ADE80).withOpacity(0.1),
+                    color: const Color(0xFF4ADE80).withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(16),
                   ),
                   child: Row(

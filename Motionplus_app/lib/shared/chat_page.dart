@@ -366,7 +366,7 @@ class _ChatPageState extends State<ChatPage> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.03),
+                    color: Colors.black.withValues(alpha: 0.03),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -434,15 +434,8 @@ class _ChatPageState extends State<ChatPage> {
     final isEditing = _editingMessageId != null;
     return Container(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      decoration: BoxDecoration(
+      decoration: const BoxDecoration(
         color: Colors.white,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.03),
-            blurRadius: 10,
-            offset: const Offset(0, -5),
-          ),
-        ],
       ),
       child: Column(
         children: [
@@ -508,28 +501,39 @@ class _ChatPageState extends State<ChatPage> {
                         fontSize: 14,
                       ),
                       border: InputBorder.none,
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                      filled: false,
                     ),
                   ),
                 ),
               ),
               const SizedBox(width: 12),
-              GestureDetector(
-                onTap: _sendMessage,
-                child: Container(
-                  height: 48,
-                  width: 48,
-                  decoration: BoxDecoration(
-                    color: isEditing
-                        ? const Color(0xFF10B981)
-                        : const Color(0xFF3E84DC),
-                    shape: BoxShape.circle,
-                  ),
-                  child: Icon(
-                    isEditing ? Icons.check_rounded : Icons.send_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                ),
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: _messageController,
+                builder: (context, value, child) {
+                  final hasText = value.text.trim().isNotEmpty;
+                  return GestureDetector(
+                    onTap: hasText ? _sendMessage : null,
+                    child: Container(
+                      height: 48,
+                      width: 48,
+                      decoration: BoxDecoration(
+                        color: hasText
+                            ? (isEditing
+                                ? const Color(0xFF10B981)
+                                : const Color(0xFF3E84DC))
+                            : const Color(0xFFCBD5E1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        isEditing ? Icons.check_rounded : Icons.send_rounded,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                    ),
+                  );
+                },
               ),
             ],
           ),

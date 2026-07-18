@@ -1,14 +1,69 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:intl/intl.dart';
 import '../services/api_service.dart';
 import 'log_entry_sheet.dart';
 import 'morningform.dart';
 import 'reminders_page.dart';
 
-class CaregiverDashboard extends StatelessWidget {
+class CaregiverDashboard extends StatefulWidget {
   final VoidCallback? onBookAppointment;
 
   const CaregiverDashboard({super.key, this.onBookAppointment});
+
+  @override
+  State<CaregiverDashboard> createState() => _CaregiverDashboardState();
+}
+
+class _CaregiverDashboardState extends State<CaregiverDashboard> {
+  bool _morningFormTriggered = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkMorningFormTrigger();
+  }
+
+  Future<void> _checkMorningFormTrigger() async {
+    if (_morningFormTriggered) return;
+    
+    final prefs = await SharedPreferences.getInstance();
+    final todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
+    final now = DateTime.now();
+    bool shouldShowForm = false;
+    
+    final lastCompletedStr = prefs.getString('last_completed_treatment_date');
+    if (lastCompletedStr != null) {
+      final lastCompletedDate = DateTime.parse(lastCompletedStr);
+      final triggerTime = DateTime(lastCompletedDate.year, lastCompletedDate.month, lastCompletedDate.day, 6, 0).add(const Duration(days: 1));
+      
+      if (now.isAfter(triggerTime)) {
+        final lastSubmittedStr = prefs.getString('morning_form_submitted_for_treatment_date');
+        if (lastSubmittedStr != lastCompletedStr) {
+          shouldShowForm = true;
+        }
+      }
+    }
+
+    if (shouldShowForm && mounted) {
+      _morningFormTriggered = true;
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => const MorningFormScreen(sessionId: ''),
+        ),
+      );
+      
+      if (result == true) {
+        if (lastCompletedStr != null) {
+          prefs.setString('morning_form_submitted_for_treatment_date', lastCompletedStr);
+        }
+        prefs.setString('last_morning_form_date', todayStr);
+      }
+      _morningFormTriggered = false;
+    }
+  }
 
   Future<void> _handleMorningQuestionnaire(BuildContext context) async {
     final now = DateTime.now();
@@ -78,9 +133,9 @@ class CaregiverDashboard extends StatelessWidget {
               ElevatedButton(
                 onPressed: () {
                   Navigator.pop(context); // Close dialog
-                  if (onBookAppointment != null) {
+                  if (widget.onBookAppointment != null) {
                     Navigator.pop(context); // Also pop the dashboard itself to go back to parent view
-                    onBookAppointment!();
+                    widget.onBookAppointment!();
                   }
                 },
                 style: ElevatedButton.styleFrom(
@@ -204,7 +259,7 @@ class CaregiverDashboard extends StatelessWidget {
           color: Colors.white,
           borderRadius: BorderRadius.circular(20),
           boxShadow: [
-            BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+            BoxShadow(color: Colors.black.withValues(alpha: 0.04), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Row(
@@ -212,7 +267,7 @@ class CaregiverDashboard extends StatelessWidget {
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: color.withOpacity(0.1),
+                color: color.withValues(alpha: 0.1),
                 shape: BoxShape.circle,
               ),
               child: Icon(icon, color: color, size: 28),
@@ -251,7 +306,7 @@ class CaregiverDashboard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.2)),
+          border: Border.all(color: color.withValues(alpha: 0.2)),
         ),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,

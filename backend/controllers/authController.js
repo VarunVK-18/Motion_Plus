@@ -9,6 +9,14 @@ const registerUser = async (req, res) => {
     try {
         const { first_name, last_name, phone, role, email, password, clinic_id, specialization } = req.body;
 
+        if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
+            return res.status(400).json({ message: 'Invalid email format' });
+        }
+        
+        if (!password || password.length < 8) {
+            return res.status(400).json({ message: 'Password must be at least 8 characters' });
+        }
+
         const userExists = await Profile.findOne({ email });
 
         if (userExists) {
@@ -57,20 +65,24 @@ const loginUser = async (req, res) => {
         // Case-insensitive email lookup
         const user = await Profile.findOne({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
 
-        if (user && (await user.matchPassword(password))) {
-            res.json({
-                _id: user._id,
-                first_name: user.first_name,
-                last_name: user.last_name,
-                full_name: user.full_name,
-                email: user.email,
-                role: user.role,
-                clinic_id: user.clinic_id,
-                token: generateToken(user._id),
-            });
-        } else {
-            res.status(401).json({ message: 'Invalid email or password' });
+        if (!user) {
+            return res.status(401).json({ message: 'invalid email id' });
         }
+
+        if (!(await user.matchPassword(password))) {
+            return res.status(401).json({ message: 'your entered password is wrong' });
+        }
+
+        res.json({
+            _id: user._id,
+            first_name: user.first_name,
+            last_name: user.last_name,
+            full_name: user.full_name,
+            email: user.email,
+            role: user.role,
+            clinic_id: user.clinic_id,
+            token: generateToken(user._id),
+        });
     } catch (error) {
         console.error('Error in login:', error);
         res.status(500).json({ message: 'Server error', error: error.message });

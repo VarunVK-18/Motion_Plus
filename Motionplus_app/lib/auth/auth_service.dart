@@ -6,7 +6,6 @@ import '../patients/patient_dashboard.dart';
 import '../services/api_service.dart';
 import '../services/socket_service.dart';
 import '../notifications/notification_service.dart';
-import 'dart:convert';
 
 class AuthService {
   static bool isPasswordRecovery = false;

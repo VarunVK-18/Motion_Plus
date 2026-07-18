@@ -276,7 +276,7 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
             shrinkWrap: true,
             physics: const NeverScrollableScrollPhysics(),
             itemCount: _assessments.length,
-            separatorBuilder: (context, index) => Divider(color: Colors.grey.withOpacity(0.2)),
+            separatorBuilder: (context, index) => Divider(color: Colors.grey.withValues(alpha: 0.2)),
             itemBuilder: (context, index) {
               final doc = _assessments[index];
               final dateStr = DateFormat('MMM d, yyyy').format(DateTime.parse(doc['created_at']));
@@ -315,7 +315,7 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                       decoration: BoxDecoration(
-                        color: isPatientUploader ? AppTheme.deepSageGreen.withOpacity(0.1) : Colors.blue.withOpacity(0.1),
+                        color: isPatientUploader ? AppTheme.deepSageGreen.withValues(alpha: 0.1) : Colors.blue.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
@@ -375,8 +375,9 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
         String extension = '';
         if (!fileName.contains('.')) {
           final type = doc['type']?.toString().toUpperCase() ?? '';
-          if (type == 'PDF') extension = '.pdf';
-          else if (type == 'IMAGE') extension = '.png';
+          if (type == 'PDF') {
+            extension = '.pdf';
+          } else if (type == 'IMAGE') extension = '.png';
           else if (type == 'VIDEO') extension = '.mp4';
           else if (type == 'AUDIO') extension = '.m4a';
         }

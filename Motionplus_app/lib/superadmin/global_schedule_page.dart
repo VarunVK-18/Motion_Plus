@@ -82,7 +82,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
           labelColor: Theme.of(context).colorScheme.primary,
           unselectedLabelColor: Theme.of(
             context,
-          ).colorScheme.onSurface.withOpacity(0.5),
+          ).colorScheme.onSurface.withValues(alpha: 0.5),
           indicatorColor: Theme.of(context).colorScheme.primary,
           indicatorWeight: 3,
           labelStyle: GoogleFonts.outfit(
@@ -121,7 +121,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withOpacity(0.5)),
+                Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withValues(alpha: 0.5)),
                 const SizedBox(height: 16),
                 Text(
                   'Schedules Unavailable',
@@ -129,7 +129,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                 ),
                 Text(
                   'Please check your network connection',
-                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                  style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                 ),
               ],
             ),
@@ -138,14 +138,14 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Center(child: CircularProgressIndicator());
         }
-        final sessions = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
+        final sessions = (snapshot.data)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
         if (sessions.isEmpty) return _buildEmptyState(filterStatus);
 
         return ListView.builder(
           padding: const EdgeInsets.all(16),
           itemCount: sessions.length,
           itemBuilder: (context, index) =>
-              _buildAppointmentCard(sessions[index] as Map<String, dynamic>),
+              _buildAppointmentCard(sessions[index]),
         );
       },
     );
@@ -183,14 +183,14 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
         borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -231,7 +231,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                     vertical: 4,
                   ),
                   decoration: BoxDecoration(
-                    color: statusColor.withOpacity(0.2),
+                    color: statusColor.withValues(alpha: 0.2),
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -302,7 +302,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
                         fontSize: 13,
                         color: Theme.of(
                           context,
-                        ).colorScheme.onSurface.withOpacity(0.6),
+                        ).colorScheme.onSurface.withValues(alpha: 0.6),
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -387,7 +387,7 @@ class _GlobalSchedulePageState extends State<GlobalSchedulePage>
           Icon(
             Icons.calendar_today_rounded,
             size: 64,
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
           Text(

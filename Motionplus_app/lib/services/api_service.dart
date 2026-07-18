@@ -1,11 +1,20 @@
+import 'package:flutter/foundation.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../core/constants/port.dart';
 
 class ApiService {
   static String get baseUrl => PortConstants.apiUrl;
   static const _storage = FlutterSecureStorage();
+
+  static Future<void> _checkConnectivity() async {
+    final results = await Connectivity().checkConnectivity();
+    if (results.contains(ConnectivityResult.none)) {
+      throw Exception('No internet connection. Please check your network and try again.');
+    }
+  }
 
   static Future<String?> getToken() async {
     return await _storage.read(key: 'jwt_token');
@@ -37,10 +46,11 @@ class ApiService {
   // Generic POST Request
   static Future<dynamic> post(String endpoint, Map<String, dynamic> body, {bool includeAuth = true}) async {
     try {
+      await _checkConnectivity();
       final headers = await _getHeaders(includeAuth: includeAuth);
       final url = '$baseUrl$endpoint';
       // ignore: avoid_print
-      print('API POST: $url');
+      debugPrint('API POST: $url');
       final response = await http.post(
         Uri.parse(url),
         headers: headers,
@@ -49,7 +59,7 @@ class ApiService {
       return _processResponse(response);
     } catch (e) {
       // ignore: avoid_print
-      print('API POST ERROR: $e');
+      debugPrint('API POST ERROR: $e');
       throw Exception('Network error: $e');
     }
   }
@@ -57,10 +67,11 @@ class ApiService {
   // Generic GET Request
   static Future<dynamic> get(String endpoint, {bool includeAuth = true}) async {
     try {
+      await _checkConnectivity();
       final headers = await _getHeaders(includeAuth: includeAuth);
       final url = '$baseUrl$endpoint';
       // ignore: avoid_print
-      print('API GET: $url');
+      debugPrint('API GET: $url');
       final response = await http.get(
         Uri.parse(url),
         headers: headers,
@@ -68,7 +79,7 @@ class ApiService {
       return _processResponse(response);
     } catch (e) {
       // ignore: avoid_print
-      print('API GET ERROR: $e');
+      debugPrint('API GET ERROR: $e');
       throw Exception('Network error: $e');
     }
   }
@@ -76,6 +87,7 @@ class ApiService {
   // Generic PUT Request
   static Future<dynamic> put(String endpoint, Map<String, dynamic> body, {bool includeAuth = true}) async {
     try {
+      await _checkConnectivity();
       final headers = await _getHeaders(includeAuth: includeAuth);
       final url = '$baseUrl$endpoint';
       final response = await http.put(
@@ -92,6 +104,7 @@ class ApiService {
   // Generic DELETE Request
   static Future<dynamic> delete(String endpoint, {bool includeAuth = true}) async {
     try {
+      await _checkConnectivity();
       final headers = await _getHeaders(includeAuth: includeAuth);
       final url = '$baseUrl$endpoint';
       final response = await http.delete(

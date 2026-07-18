@@ -353,7 +353,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
       child: Column(
         children: [
             // Profile Header
-            Container(
+            SizedBox(
               width: double.infinity,
               child: GlassCard(
                 padding: const EdgeInsets.all(32),
@@ -371,7 +371,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                           builder: (context, imagePath, child) {
                             return CircleAvatar(
                               radius: 50,
-                              backgroundColor: AppTheme.deepSageGreen.withOpacity(0.1),
+                              backgroundColor: AppTheme.deepSageGreen.withValues(alpha: 0.1),
                               backgroundImage: imagePath != null ? FileImage(File(imagePath)) : null,
                               child: imagePath == null
                                   ? Text(
@@ -418,7 +418,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                       vertical: 6,
                     ),
                     decoration: BoxDecoration(
-                      color: AppTheme.deepSageGreen.withOpacity(0.1),
+                      color: AppTheme.deepSageGreen.withValues(alpha: 0.1),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Text(
@@ -449,13 +449,13 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                     label: 'Email Address',
                     value: widget.email,
                   ),
-                  Divider(height: 1, color: Colors.grey.withOpacity(0.1)),
+                  Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
                   _buildDetailTile(
                     icon: Icons.phone_outlined,
                     label: 'Phone Number',
                     value: _phone,
                   ),
-                  Divider(height: 1, color: Colors.grey.withOpacity(0.1)),
+                  Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
                   _buildDetailTile(
                     icon: Icons.calendar_today_outlined,
                     label: 'Member Since',
@@ -495,7 +495,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
                       value: 'Simplified interface for kids',
                     ),
                   ),
-                  Divider(height: 1, color: Colors.grey.withOpacity(0.1)),
+                  Divider(height: 1, color: Colors.grey.withValues(alpha: 0.1)),
                   InkWell(
                     onTap: () => Navigator.push(
                       context,

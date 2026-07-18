@@ -189,7 +189,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                       return ListTile(
                         contentPadding: EdgeInsets.zero,
                         leading: CircleAvatar(
-                          backgroundColor: themeColor.withOpacity(0.08),
+                          backgroundColor: themeColor.withValues(alpha: 0.08),
                           child: Text(
                             name[0].toUpperCase(),
                             style: TextStyle(
@@ -308,7 +308,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
               borderRadius: BorderRadius.circular(22),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
+                  color: Colors.black.withValues(alpha: 0.03),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -512,7 +512,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             decoration: BoxDecoration(
               color: bgColor,
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: themeColor.withOpacity(0.08)),
+              border: Border.all(color: themeColor.withValues(alpha: 0.08)),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -531,7 +531,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                   style: GoogleFonts.outfit(
                     fontSize: 18,
                     fontWeight: FontWeight.w700,
-                    color: themeColor.withOpacity(0.8),
+                    color: themeColor.withValues(alpha: 0.8),
                   ),
                 ),
                 Text(
@@ -539,7 +539,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                   style: GoogleFonts.outfit(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
-                    color: themeColor.withOpacity(0.6),
+                    color: themeColor.withValues(alpha: 0.6),
                   ),
                 ),
               ],
@@ -586,7 +586,7 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
             color: Colors.white,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.05),
+                color: Colors.black.withValues(alpha: 0.05),
                 blurRadius: 20,
                 offset: const Offset(0, 10),
               ),

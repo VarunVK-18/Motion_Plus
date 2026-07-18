@@ -168,7 +168,7 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
                 Text(
                   'Daily Progress',
                   style: GoogleFonts.outfit(
-                    color: Colors.white.withOpacity(0.7),
+                    color: Colors.white.withValues(alpha: 0.7),
                     fontSize: 12,
                     fontWeight: FontWeight.w400,
                   ),
@@ -288,7 +288,7 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
                 boxShadow: isSelected
                     ? [
                         BoxShadow(
-                          color: themeColor.withOpacity(0.2),
+                          color: themeColor.withValues(alpha: 0.2),
                           blurRadius: 8,
                           offset: const Offset(0, 4),
                         ),
@@ -354,7 +354,7 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
         borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.05),
+            color: Colors.black.withValues(alpha: 0.05),
             blurRadius: 24,
             offset: const Offset(0, 12),
           ),
@@ -743,6 +743,7 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
                   }, includeAuth: true);
                 }
 
+                if (!context.mounted) return;
                 Navigator.pop(context);
               }
             },

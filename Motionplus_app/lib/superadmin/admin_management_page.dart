@@ -94,7 +94,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                 style: GoogleFonts.outfit(
                   fontWeight: FontWeight.w400,
                   fontSize: 13,
-                  color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                  color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
             ],
@@ -156,7 +156,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                       child: Text(
                         'Cancel',
                         style: GoogleFonts.outfit(
-                            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
                           fontWeight: FontWeight.w600,
                         ),
                       ),
@@ -397,7 +397,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
               : null,
           filled: true,
           fillColor: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.03)
+              ? Colors.white.withValues(alpha: 0.03)
               : const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
@@ -407,7 +407,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : const Color(0xFFE2E8F0),
             ),
           ),
@@ -448,7 +448,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           ),
           filled: true,
           fillColor: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.03)
+              ? Colors.white.withValues(alpha: 0.03)
               : const Color(0xFFF8FAFC),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
@@ -458,7 +458,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
             borderRadius: BorderRadius.circular(16),
             borderSide: BorderSide(
               color: Theme.of(context).brightness == Brightness.dark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withValues(alpha: 0.08)
                   : const Color(0xFFE2E8F0),
             ),
           ),
@@ -528,7 +528,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withOpacity(0.5)),
+                          Icon(Icons.wifi_off_rounded, size: 48, color: Colors.redAccent.withValues(alpha: 0.5)),
                           const SizedBox(height: 16),
                           Text(
                             'Connection Error',
@@ -536,7 +536,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                           ),
                           Text(
                             'Please check your network: \${snapshot.error}',
-                            style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6)),
+                            style: GoogleFonts.outfit(fontSize: 12, color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6)),
                             textAlign: TextAlign.center,
                           ),
                         ],
@@ -547,7 +547,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
                     return const Center(child: CircularProgressIndicator());
                   }
 
-                  final admins = (snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
+                  final admins = (snapshot.data)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[];
 
                   // Local Filtering for responsive search
                   final filteredAdmins = admins.where((admin) {
@@ -601,7 +601,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           Icon(
             Icons.admin_panel_settings_outlined,
             size: 64,
-            color: const Color(0xFF0F172A).withOpacity(0.05),
+            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
           ),
           const SizedBox(height: 16),
           Text(
@@ -663,12 +663,12 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFE2E8F0),
         ),
       ),
       elevation: Theme.of(context).brightness == Brightness.dark ? 0 : 2,
-      shadowColor: Colors.black.withOpacity(0.03),
+      shadowColor: Colors.black.withValues(alpha: 0.03),
       color: Theme.of(context).cardColor,
       child: ListTile(
         contentPadding: const EdgeInsets.all(16),
@@ -688,7 +688,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
           "Admin • ${admin['phone'] ?? 'No Phone'}\n$clinicName",
           style: GoogleFonts.outfit(
             fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
           ),
         ),
         trailing: IconButton(

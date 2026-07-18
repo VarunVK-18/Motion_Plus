@@ -312,7 +312,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
-          color: PatientDetailsPage.primaryBlue.withOpacity(0.1),
+          color: PatientDetailsPage.primaryBlue.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(
@@ -389,7 +389,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: PatientDetailsPage.darkSlate.withOpacity(0.2),
+                    color: PatientDetailsPage.darkSlate.withValues(alpha: 0.2),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -446,7 +446,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
           color: selectedDate != null
-              ? PatientDetailsPage.primaryBlue.withOpacity(0.1)
+              ? PatientDetailsPage.primaryBlue.withValues(alpha: 0.1)
               : Colors.white,
           borderRadius: BorderRadius.circular(12),
           border: Border.all(
@@ -497,7 +497,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
         borderRadius: const BorderRadius.vertical(bottom: Radius.circular(28)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.02),
+            color: Colors.black.withValues(alpha: 0.02),
             blurRadius: 15,
             offset: const Offset(0, 8),
           ),
@@ -576,9 +576,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.04),
+          color: color.withValues(alpha: 0.04),
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: color.withOpacity(0.08)),
+          border: Border.all(color: color.withValues(alpha: 0.08)),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -689,7 +689,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                                 ),
                                 decoration: BoxDecoration(
                                   color: PatientDetailsPage.forestGreen
-                                      .withOpacity(0.05),
+                                      .withValues(alpha: 0.05),
                                   borderRadius: BorderRadius.circular(10),
                                 ),
                                 child: Center(
@@ -724,7 +724,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                               padding: const EdgeInsets.all(10),
                               decoration: BoxDecoration(
                                 color: PatientDetailsPage.primaryBlue
-                                    .withOpacity(0.05),
+                                    .withValues(alpha: 0.05),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               child: const Icon(
@@ -958,7 +958,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -1085,7 +1085,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               elevation: 0,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
-                side: BorderSide(color: Colors.grey.withOpacity(0.2)),
+                side: BorderSide(color: Colors.grey.withValues(alpha: 0.2)),
               ),
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -1099,7 +1099,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                           decoration: BoxDecoration(
-                            color: score >= 80 ? PatientDetailsPage.forestGreen.withOpacity(0.1) : (score >= 50 ? Colors.orange.withOpacity(0.1) : Colors.red.withOpacity(0.1)),
+                            color: score >= 80 ? PatientDetailsPage.forestGreen.withValues(alpha: 0.1) : (score >= 50 ? Colors.orange.withValues(alpha: 0.1) : Colors.red.withValues(alpha: 0.1)),
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(
@@ -1118,9 +1118,9 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                       Container(
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.05),
+                          color: Colors.red.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.red.withOpacity(0.2)),
+                          border: Border.all(color: Colors.red.withValues(alpha: 0.2)),
                         ),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -1142,18 +1142,21 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                     Row(
                       children: [
                         Expanded(child: _reportSection('Overall Day', checkin['overall_day']?.toString() ?? 'N/A')),
+                        const SizedBox(width: 16),
                         Expanded(child: _reportSection('Energy', checkin['energy_level']?.toString() ?? 'N/A')),
                       ],
                     ),
                     Row(
                       children: [
                         Expanded(child: _reportSection('Sleep', checkin['sleep_quality']?.toString() ?? 'N/A')),
+                        const SizedBox(width: 16),
                         Expanded(child: _reportSection('Mood', checkin['mood']?.toString() ?? 'N/A')),
                       ],
                     ),
                     Row(
                       children: [
                         Expanded(child: _reportSection('Pain/Discomfort', checkin['pain_discomfort']?.toString() ?? 'N/A')),
+                        const SizedBox(width: 16),
                         Expanded(child: _reportSection('Compliance', '$compliance%')),
                       ],
                     ),

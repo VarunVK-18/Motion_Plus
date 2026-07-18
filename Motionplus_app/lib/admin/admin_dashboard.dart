@@ -138,7 +138,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
       decoration: BoxDecoration(
         color: Colors.white,
         border: Border(
-          bottom: BorderSide(color: Colors.black.withOpacity(0.02)),
+          bottom: BorderSide(color: Colors.black.withValues(alpha: 0.02)),
         ),
       ),
       child: Row(
@@ -150,7 +150,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
                 decoration: BoxDecoration(
-                  color: primaryBlue.withOpacity(0.08),
+                  color: primaryBlue.withValues(alpha: 0.08),
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
@@ -208,9 +208,9 @@ class _AdminDashboardState extends State<AdminDashboard> {
           child: Container(
             height: 68,
             decoration: BoxDecoration(
-              color: darkSlate.withOpacity(0.85), // Semi-transparent dark slate
+              color: darkSlate.withValues(alpha: 0.85), // Semi-transparent dark slate
               borderRadius: BorderRadius.circular(22),
-              border: Border.all(color: Colors.white.withOpacity(0.1)),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.1)),
             ),
             padding: const EdgeInsets.symmetric(horizontal: 10),
             child: Row(
@@ -265,7 +265,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
         decoration: BoxDecoration(
           color: isSelected
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : Colors.transparent,
           borderRadius: BorderRadius.circular(14),
         ),
@@ -277,14 +277,14 @@ class _AdminDashboardState extends State<AdminDashboard> {
                     displayIcon,
                     color: isSelected
                         ? Colors.white
-                        : Colors.white.withOpacity(0.4),
+                        : Colors.white.withValues(alpha: 0.4),
                     size: 22,
                   )
                 : HugeIcon(
                     icon: displayIcon,
                     color: isSelected
                         ? Colors.white
-                        : Colors.white.withOpacity(0.4),
+                        : Colors.white.withValues(alpha: 0.4),
                     size: 22,
                   ),
             const SizedBox(height: 3),
@@ -295,7 +295,7 @@ class _AdminDashboardState extends State<AdminDashboard> {
                 fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                 color: isSelected
                     ? Colors.white
-                    : Colors.white.withOpacity(0.4),
+                    : Colors.white.withValues(alpha: 0.4),
               ),
             ),
           ],

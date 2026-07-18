@@ -52,7 +52,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
     final user = _currentUser;
     if (user != null) {
       try {
-        await ApiService.put('/profiles/' + user['id'].toString(), {'clinical_status': newStatus}, includeAuth: true);
+        await ApiService.put('/profiles/${user['id']}', {'clinical_status': newStatus}, includeAuth: true);
         if (mounted) {
           setState(() {
             _currentStatus = newStatus;
@@ -126,7 +126,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
 
   Future<void> _startSession(String sessionId, int minutes) async {
     try {
-      final data = await ApiService.put('/sessions/' + sessionId.trim(), {
+      final data = await ApiService.put('/sessions/${sessionId.trim()}', {
             'status': 'in_progress',
             'started_at': DateTime.now().toUtc().toIso8601String(),
             'allotted_time': minutes,
@@ -181,7 +181,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
       }
 
       await ApiService.put(
-        '/sessions/' + sessionId.trim(),
+        '/sessions/${sessionId.trim()}',
         payload,
         includeAuth: true,
       );
@@ -310,9 +310,9 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                         margin: const EdgeInsets.only(bottom: 12),
                         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                         decoration: BoxDecoration(
-                          color: color.withOpacity(0.1),
+                          color: color.withValues(alpha: 0.1),
                           borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: color.withOpacity(0.3)),
+                          border: Border.all(color: color.withValues(alpha: 0.3)),
                         ),
                         child: Row(
                           children: [
@@ -329,7 +329,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                               padding: EdgeInsets.zero,
                               constraints: const BoxConstraints(),
                               onPressed: () async {
-                                await ApiService.put('/smart_alerts/' + alert['id'].toString(), {'is_read': true}, includeAuth: true);
+                                await ApiService.put('/smart_alerts/${alert['id']}', {'is_read': true}, includeAuth: true);
                               },
                             ),
                           ],
@@ -352,7 +352,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                   border: Border.all(color: const Color(0xFFE2E8F0)),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.03),
+                      color: Colors.black.withValues(alpha: 0.03),
                       blurRadius: 10,
                       offset: const Offset(0, 4),
                     ),
@@ -363,7 +363,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                     Container(
                       padding: const EdgeInsets.all(10),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3E84DC).withOpacity(0.1),
+                        color: const Color(0xFF3E84DC).withValues(alpha: 0.1),
                         shape: BoxShape.circle,
                       ),
                       child: const HugeIcon(
@@ -425,7 +425,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                           Icon(
                             Icons.wifi_off_rounded,
                             size: 48,
-                            color: Colors.redAccent.withOpacity(0.5),
+                            color: Colors.redAccent.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 16),
                           Text(
@@ -464,47 +464,63 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                       .toList();
 
                   if (activeSessions.isEmpty) {
-                    return Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Container(
-                            padding: const EdgeInsets.all(24),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFFF1F5F9),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.assignment_turned_in_rounded,
-                              size: 40,
-                              color: Color(0xFF94A3B8),
-                            ),
+                    return RefreshIndicator(
+                      onRefresh: () async {
+                        setState(() {});
+                      },
+                      color: const Color(0xFF3E84DC),
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(),
+                        child: Container(
+                          height: MediaQuery.of(context).size.height * 0.6,
+                          alignment: Alignment.center,
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(24),
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFF1F5F9),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.assignment_turned_in_rounded,
+                                  size: 40,
+                                  color: Color(0xFF94A3B8),
+                                ),
+                              ),
+                              const SizedBox(height: 20),
+                              Text(
+                                'All caught up!',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: const Color(0xFF0F172A),
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Text(
+                                'No pending clinical assignments at the moment.',
+                                style: GoogleFonts.outfit(
+                                  fontSize: 14,
+                                  color: const Color(0xFF64748B),
+                                ),
+                              ),
+                            ],
                           ),
-                          const SizedBox(height: 20),
-                          Text(
-                            'All caught up!',
-                            style: GoogleFonts.outfit(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: const Color(0xFF0F172A),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'No pending clinical assignments at the moment.',
-                            style: GoogleFonts.outfit(
-                              fontSize: 14,
-                              color: const Color(0xFF64748B),
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     );
                   }
 
-                  return ListView.builder(
-                    padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
-                    physics: const BouncingScrollPhysics(),
+                  return RefreshIndicator(
+                    onRefresh: () async {
+                      setState(() {});
+                    },
+                    color: const Color(0xFF3E84DC),
+                    child: ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(24, 0, 24, 40),
+                      physics: const AlwaysScrollableScrollPhysics(),
                     itemCount: activeSessions.length,
                     itemBuilder: (context, index) {
                       final session = activeSessions[index];
@@ -521,8 +537,9 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                         ),
                       );
                     },
-                  );
-                },
+                  ),
+                );
+              },
               ),
             ),
           ],
@@ -550,7 +567,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
               ),
             ),
             child: FutureBuilder(
-              future: ApiService.get('/profiles/' + userId.toString(), includeAuth: true),
+              future: ApiService.get('/profiles/$userId', includeAuth: true),
               builder: (context, snapshot) {
                 final profile = snapshot.data;
                 final name =
@@ -566,7 +583,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                     Container(
                       padding: const EdgeInsets.all(3),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.2),
+                        color: Colors.white.withValues(alpha: 0.2),
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 2),
                       ),
@@ -591,7 +608,7 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                               vertical: 2,
                             ),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withValues(alpha: 0.15),
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
@@ -620,14 +637,14 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                               Icon(
                                 Icons.alternate_email_rounded,
                                 size: 14,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                               const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   user?['email'] ?? 'No Email',
                                   style: GoogleFonts.outfit(
-                                    color: Colors.white.withOpacity(0.8),
+                                    color: Colors.white.withValues(alpha: 0.8),
                                     fontSize: 12,
                                     fontWeight: FontWeight.w500,
                                   ),
@@ -642,13 +659,13 @@ class _TherapistDashboardState extends State<TherapistDashboard> {
                               Icon(
                                 Icons.phone_android_rounded,
                                 size: 14,
-                                color: Colors.white.withOpacity(0.7),
+                                color: Colors.white.withValues(alpha: 0.7),
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 phone,
                                 style: GoogleFonts.outfit(
-                                  color: Colors.white.withOpacity(0.8),
+                                  color: Colors.white.withValues(alpha: 0.8),
                                   fontSize: 12,
                                   fontWeight: FontWeight.w500,
                                 ),
@@ -947,7 +964,7 @@ class _SessionCardState extends State<_SessionCard> {
                                 thumbColor: const Color(0xFF3E84DC),
                                 overlayColor: const Color(
                                   0xFF3E84DC,
-                                ).withOpacity(0.1),
+                                ).withValues(alpha: 0.1),
                                 valueIndicatorColor: const Color(0xFF0F172A),
                                 valueIndicatorTextStyle: GoogleFonts.outfit(
                                   color: Colors.white,
@@ -1158,7 +1175,7 @@ class _SessionCardState extends State<_SessionCard> {
     );
 
     if (confirmed == true) {
-      await ApiService.delete('/prescribed_exercises/' + id.toString(), includeAuth: true);
+      await ApiService.delete('/prescribed_exercises/$id', includeAuth: true);
     }
   }
 
@@ -1359,7 +1376,7 @@ class _SessionCardState extends State<_SessionCard> {
                       leading: Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: const Color(0xFF3E84DC).withOpacity(0.1),
+                          color: const Color(0xFF3E84DC).withValues(alpha: 0.1),
                           shape: BoxShape.circle,
                         ),
                         child: Icon(
@@ -1454,7 +1471,7 @@ class _SessionCardState extends State<_SessionCard> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF10B981).withOpacity(0.1),
+                    color: const Color(0xFF10B981).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -1553,7 +1570,7 @@ class _SessionCardState extends State<_SessionCard> {
       child: Container(
         padding: const EdgeInsets.all(8),
         decoration: BoxDecoration(
-          color: color.withOpacity(0.1),
+          color: color.withValues(alpha: 0.1),
           borderRadius: BorderRadius.circular(8),
         ),
         child: HugeIcon(icon: icon, size: 16, color: color),
@@ -1577,7 +1594,7 @@ class _SessionCardState extends State<_SessionCard> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
+            color: Colors.black.withValues(alpha: 0.04),
             blurRadius: 16,
             offset: const Offset(0, 8),
           ),
@@ -1614,7 +1631,7 @@ class _SessionCardState extends State<_SessionCard> {
                         vertical: 4,
                       ),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF3E84DC).withOpacity(0.1),
+                        color: const Color(0xFF3E84DC).withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(6),
                       ),
                       child: Text(
@@ -1778,7 +1795,7 @@ class _SessionCardState extends State<_SessionCard> {
                           borderRadius: BorderRadius.circular(3),
                           boxShadow: [
                             BoxShadow(
-                              color: const Color(0xFF10B981).withOpacity(0.3),
+                              color: const Color(0xFF10B981).withValues(alpha: 0.3),
                               blurRadius: 4,
                               offset: const Offset(0, 2),
                             ),
@@ -1887,7 +1904,7 @@ class _SessionCardState extends State<_SessionCard> {
                                     vertical: 4,
                                   ),
                                   decoration: BoxDecoration(
-                                    color: statusColor.withOpacity(0.1),
+                                    color: statusColor.withValues(alpha: 0.1),
                                     borderRadius: BorderRadius.circular(6),
                                   ),
                                   child: Row(
@@ -2180,7 +2197,7 @@ class _SessionCardState extends State<_SessionCard> {
   Widget _statusBadge(String l, Color c) => Container(
     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
     decoration: BoxDecoration(
-      color: c.withOpacity(0.08),
+      color: c.withValues(alpha: 0.08),
       borderRadius: BorderRadius.circular(8),
     ),
     child: Row(
@@ -2303,7 +2320,7 @@ class _TherapistHistoryPage extends StatelessWidget {
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
+                                color: Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 12,
                                 offset: const Offset(0, 6),
                               ),
@@ -2389,6 +2406,26 @@ class _TherapistHistoryPage extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  Future<Map<String, dynamic>?> _fetchNextMorningCheckin(dynamic patientObj, String? sessionDateStr) async {
+    if (patientObj == null || sessionDateStr == null) return null;
+    final String pId = (patientObj is Map) ? patientObj['_id'] ?? patientObj['id'] : patientObj.toString();
+    try {
+      final res = await ApiService.get('/morning_checkins?patient_id=$pId&_sort=created_at:asc', includeAuth: true);
+      if (res != null && res is List) {
+        final sessionDate = DateTime.parse(sessionDateStr).toLocal();
+        for (var checkin in res) {
+          final checkinDate = DateTime.parse(checkin['created_at']).toLocal();
+          if (checkinDate.isAfter(sessionDate)) {
+            return checkin as Map<String, dynamic>;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching next checkin: $e');
+    }
+    return null;
   }
 
   void _showSessionDetails(BuildContext context, Map<String, dynamic> s) {
@@ -2481,6 +2518,88 @@ class _TherapistHistoryPage extends StatelessWidget {
                         ),
                       ),
                     ],
+                    
+                    const SizedBox(height: 32),
+                    const Divider(color: Color(0xFFF1F5F9)),
+                    const SizedBox(height: 32),
+
+                    // --- MORNING CHECK-IN SECTION ---
+                    _sectionTitle('NEXT DAY MORNING CHECK-IN'),
+                    FutureBuilder<dynamic>(
+                      future: _fetchNextMorningCheckin(s['patient_id'], s['completed_at'] ?? s['created_at']),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Padding(
+                            padding: EdgeInsets.symmetric(vertical: 20),
+                            child: CircularProgressIndicator(color: Color(0xFF3E84DC)),
+                          );
+                        }
+                        
+                        final checkin = snapshot.data as Map<String, dynamic>?;
+                        if (checkin == null) {
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 20),
+                            child: Text(
+                              'No morning check-in recorded after this session yet.',
+                              style: GoogleFonts.outfit(
+                                color: const Color(0xFF94A3B8),
+                                fontSize: 13,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          );
+                        }
+                        
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF8FAFC),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    DateFormat('MMM d, yyyy').format(DateTime.parse(checkin['created_at']).toLocal()),
+                                    style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: const Color(0xFF0F172A)),
+                                  ),
+                                  Text(
+                                    'Readiness: ${checkin['readiness_score'] ?? 0}%',
+                                    style: GoogleFonts.outfit(
+                                      fontWeight: FontWeight.w800,
+                                      color: (checkin['readiness_score'] ?? 0) >= 80 ? const Color(0xFF10B981) : const Color(0xFFF59E0B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 16),
+                              Row(
+                                children: [
+                                  Expanded(child: _infoTile('Overall', checkin['overall_day']?.toString() ?? 'N/A')),
+                                  Expanded(child: _infoTile('Energy', checkin['energy_level']?.toString() ?? 'N/A')),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(child: _infoTile('Sleep', checkin['sleep_quality']?.toString() ?? 'N/A')),
+                                  Expanded(child: _infoTile('Mood', checkin['mood']?.toString() ?? 'N/A')),
+                                ],
+                              ),
+                              Row(
+                                children: [
+                                  Expanded(child: _infoTile('Pain', checkin['pain_discomfort']?.toString() ?? 'N/A')),
+                                  Expanded(child: _infoTile('Compliance', '${checkin['compliance_score'] ?? 0}%')),
+                                ],
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -2534,9 +2653,9 @@ class _TherapistHistoryPage extends StatelessWidget {
     child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.05),
+        color: color.withValues(alpha: 0.05),
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withOpacity(0.1)),
+        border: Border.all(color: color.withValues(alpha: 0.1)),
       ),
       child: Column(
         children: [

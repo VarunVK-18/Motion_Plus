@@ -134,7 +134,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                 labelColor: Theme.of(context).colorScheme.primary,
                 unselectedLabelColor: Theme.of(
                   context,
-                ).colorScheme.onSurface.withOpacity(0.5),
+                ).colorScheme.onSurface.withValues(alpha: 0.5),
                 indicatorColor: Theme.of(context).colorScheme.primary,
                 indicatorWeight: 3,
                 labelStyle: GoogleFonts.outfit(
@@ -161,7 +161,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                   Icon(
                     Icons.wifi_off_rounded,
                     size: 48,
-                    color: Colors.redAccent.withOpacity(0.5),
+                    color: Colors.redAccent.withValues(alpha: 0.5),
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -177,7 +177,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                       fontSize: 12,
                       color: Theme.of(
                         context,
-                      ).colorScheme.onSurface.withOpacity(0.6),
+                      ).colorScheme.onSurface.withValues(alpha: 0.6),
                     ),
                   ),
                 ],
@@ -290,13 +290,13 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
             color: isSelected
                 ? Colors.transparent
                 : Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.08)
+                ? Colors.white.withValues(alpha: 0.08)
                 : const Color(0xFFE2E8F0),
           ),
           boxShadow: isSelected
               ? [
                   BoxShadow(
-                    color: const Color(0xFF3B82F6).withOpacity(0.3),
+                    color: const Color(0xFF3B82F6).withValues(alpha: 0.3),
                     blurRadius: 8,
                     offset: const Offset(0, 4),
                   ),
@@ -321,7 +321,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                 fontWeight: FontWeight.w700,
                 color: isSelected
                     ? Colors.white
-                    : Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+                    : Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               ),
             ),
           ],
@@ -354,14 +354,14 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
               borderRadius: BorderRadius.circular(32),
               border: Border.all(
                 color: Theme.of(context).brightness == Brightness.dark
-                    ? Colors.white.withOpacity(0.08)
+                    ? Colors.white.withValues(alpha: 0.08)
                     : const Color(0xFFE2E8F0),
               ),
               boxShadow: [
                 BoxShadow(
                   color: Theme.of(context).brightness == Brightness.dark
-                      ? Colors.black.withOpacity(0.2)
-                      : Colors.black.withOpacity(0.03),
+                      ? Colors.black.withValues(alpha: 0.2)
+                      : Colors.black.withValues(alpha: 0.03),
                   blurRadius: 20,
                   offset: const Offset(0, 8),
                 ),
@@ -508,7 +508,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           borderRadius: BorderRadius.circular(32),
           border: Border.all(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.white.withOpacity(0.08)
+                ? Colors.white.withValues(alpha: 0.08)
                 : const Color(0xFFF1F5F9),
           ),
         ),
@@ -561,7 +561,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                               fontSize: 10,
                               color: Theme.of(
                                 context,
-                              ).colorScheme.onSurface.withOpacity(0.5),
+                              ).colorScheme.onSurface.withValues(alpha: 0.5),
                               fontWeight: FontWeight.w700,
                             ),
                           );
@@ -580,7 +580,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                       dotData: FlDotData(show: true),
                       belowBarData: BarAreaData(
                         show: true,
-                        color: const Color(0xFF3B82F6).withOpacity(0.1),
+                        color: const Color(0xFF3B82F6).withValues(alpha: 0.1),
                       ),
                     ),
                   ],
@@ -609,7 +609,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           style: GoogleFonts.outfit(
             fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.7),
           ),
         ),
       ],
@@ -624,14 +624,14 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: Theme.of(context).brightness == Brightness.dark
-              ? Colors.white.withOpacity(0.08)
+              ? Colors.white.withValues(alpha: 0.08)
               : const Color(0xFFE2E8F0),
         ),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark
-                ? Colors.black.withOpacity(0.2)
-                : Colors.black.withOpacity(0.03),
+                ? Colors.black.withValues(alpha: 0.2)
+                : Colors.black.withValues(alpha: 0.03),
             blurRadius: 20,
             offset: const Offset(0, 8),
           ),
@@ -642,7 +642,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: color.withValues(alpha: 0.1),
               borderRadius: BorderRadius.circular(16),
             ),
             child: Icon(icon, color: color),
@@ -658,7 +658,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
                   fontWeight: FontWeight.w600,
                   color: Theme.of(
                     context,
-                  ).colorScheme.onSurface.withOpacity(0.6),
+                  ).colorScheme.onSurface.withValues(alpha: 0.6),
                 ),
               ),
               Text(
@@ -684,13 +684,13 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           Icon(
             Icons.calendar_today_rounded,
             size: 64,
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
           Text(
             text,
             style: GoogleFonts.outfit(
-              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.6),
+              color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
               fontWeight: FontWeight.w600,
             ),
           ),
@@ -707,7 +707,7 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           Icon(
             Icons.analytics_outlined,
             size: 64,
-            color: Colors.blue.withOpacity(0.1),
+            color: Colors.blue.withValues(alpha: 0.1),
           ),
           const SizedBox(height: 16),
           Text(
