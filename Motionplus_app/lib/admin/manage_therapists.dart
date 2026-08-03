@@ -25,6 +25,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
   bool _obscurePassword = true;
   String _filterCategory = 'All';
   dynamic _adminClinicId;
+  dynamic _adminBranchId;  // NEW: Track admin's branch for scoped therapist creation
   bool _isLoading = true;
 
   @override
@@ -40,6 +41,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
         setState(() {
           currentUser = user;
           _adminClinicId = user['clinic_id'] is Map ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']) : user['clinic_id'];
+          _adminBranchId = user['branch_id'] is Map ? (user['branch_id']['id'] ?? user['branch_id']['_id']) : user['branch_id'];
           _isLoading = false;
         });
       }
@@ -48,6 +50,7 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
       if (mounted) setState(() => _isLoading = false);
     }
   }
+
 
   final List<String> _categories = [
     'All',
@@ -59,16 +62,6 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
     'Speech',
     'Sensory Integration',
   ];
-  final List<String> _allSpecializations = [
-    'Ortho',
-    'Neuro',
-    'Pediatrics',
-    'Cardio',
-    'Psychology',
-    'Speech',
-    'Sensory Integration',
-  ];
-
   static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color softSage = Color(0xFFF0FAF7);
   static const Color eliteRed = Color(0xFF991B1B);
@@ -115,6 +108,8 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
         'role': 'therapist',
         'specialization': _selectedSpecialization.value!.toLowerCase(),
         'clinic_id': _adminClinicId,
+        if (_adminBranchId != null) 'branch_id': _adminBranchId,
+        if (_adminBranchId != null) 'branch_ids': [_adminBranchId],
       });
 
       if (response != null) {
@@ -565,8 +560,9 @@ class _ManageTherapistsPageState extends State<ManageTherapistsPage> {
               onSelected: (value) {
                 if (value == 'edit') {
                   _showEditDialog(person);
-                } else if (value == 'remove')
+                } else if (value == 'remove') {
                   _showDeleteConfirm(id, person['full_name']);
+                }
               },
               icon: const Icon(
                 Icons.more_vert_rounded,

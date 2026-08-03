@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'pdf_report_generator.dart';
 import 'intake_pdf_generator.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class PatientDetailsPage extends StatefulWidget {
   final String patientId;
@@ -42,16 +43,19 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
     final intakeForms = await ApiService.get('/patient_intake_forms?patient_id=${widget.patientId}', includeAuth: true) as List;
     final intakeForm = intakeForms.isNotEmpty ? intakeForms.first : null;
 
+    final documents = await ApiService.get('/patient_documents?patient_id=${widget.patientId}', includeAuth: true) as List;
+
     return {
       'sessions': sessions,
       'intakeForm': intakeForm,
+      'documents': documents,
     };
   }
 
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 3,
+      length: 4,
       child: FutureBuilder<Map<String, dynamic>>(
         future: _dataFuture,
         builder: (context, snapshot) {
@@ -70,6 +74,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
 
               final allSessions = snapshot.data!['sessions'] as List<dynamic>;
               final intakeForm = snapshot.data!['intakeForm'] as Map<String, dynamic>?;
+              final documents = snapshot.data!['documents'] as List<dynamic>? ?? [];
 
               // 1. Filter sessions in memory
               final filteredSessions = allSessions.where((s) {
@@ -123,6 +128,7 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         Tab(text: 'PATIENT DETAILS'),
                         Tab(text: 'SESSIONS'),
                         Tab(text: 'MORNING CHECK-INS'),
+                        Tab(text: 'DOCUMENTS'),
                       ],
                     ),
                   ),
@@ -148,13 +154,15 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
                         ),
                         // Morning Check-Ins Tab
                         _buildMorningCheckInsTab(),
+                        // Documents Tab
+                        _buildDocumentsTab(documents),
                       ],
                     ),
                   ),
-                ],
-              ),
-            ),
-          );
+                    ],
+                  ),
+                ),
+              );
         },
       ),
     );
@@ -1169,6 +1177,103 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
           },
         );
       }
+    );
+  }
+
+  Widget _buildDocumentsTab(List<dynamic> documents) {
+    if (documents.isEmpty) {
+      return Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.folder_open_rounded, size: 48, color: PatientDetailsPage.slate),
+            const SizedBox(height: 16),
+            Text('No documents uploaded yet.', style: GoogleFonts.outfit(fontSize: 16, color: PatientDetailsPage.slate)),
+          ],
+        ),
+      );
+    }
+    return ListView.builder(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      itemCount: documents.length,
+      itemBuilder: (context, index) {
+        final doc = documents[index];
+        final fileName = doc['file_name'] ?? 'Untitled Document';
+        final fileUrl = doc['file_url'];
+        final date = doc['created_at'] != null ? DateFormat('MMM d, yyyy').format(DateTime.parse(doc['created_at']).toLocal()) : 'Unknown Date';
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 12),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withValues(alpha: 0.02),
+                blurRadius: 8,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
+          child: ListTile(
+            contentPadding: const EdgeInsets.all(16),
+            leading: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: PatientDetailsPage.primaryBlue.withValues(alpha: 0.1),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.picture_as_pdf_rounded, color: PatientDetailsPage.primaryBlue),
+            ),
+            title: Text(
+              fileName,
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: PatientDetailsPage.darkSlate,
+              ),
+            ),
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 4),
+              child: Text(
+                'Uploaded: $date',
+                style: GoogleFonts.outfit(
+                  fontSize: 12,
+                  color: PatientDetailsPage.slate,
+                ),
+              ),
+            ),
+            trailing: ElevatedButton(
+              onPressed: () async {
+                if (fileUrl != null) {
+                  // Make sure fileUrl is an absolute URL if backend runs locally
+                  // Here we construct the full URL. E.g., ApiService.baseUrl + fileUrl
+                  final fullUrl = ApiService.baseUrl.replaceAll('/api', '') + fileUrl;
+                  final uri = Uri.parse(fullUrl);
+                  if (await canLaunchUrl(uri)) {
+                    await launchUrl(uri, mode: LaunchMode.externalApplication);
+                  } else {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open document')));
+                    }
+                  }
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: PatientDetailsPage.primaryBlue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                elevation: 0,
+              ),
+              child: Text(
+                'VIEW',
+                style: GoogleFonts.outfit(fontWeight: FontWeight.w700, fontSize: 11),
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

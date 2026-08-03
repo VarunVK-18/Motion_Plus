@@ -12,13 +12,13 @@ class ManagePatientsPage extends StatefulWidget {
 
 class _ManagePatientsPageState extends State<ManagePatientsPage> {
   static const Color honeyAmber = Color(0xFFB45309);
-  static const Color softAmber = Color(0xFFFFFBEB);
   static const Color eliteRed = Color(0xFFBE123C);
   static const Color slate = Color(0xFF475569);
 
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
   dynamic _adminClinicId;
+  dynamic _adminBranchId;
   bool _isLoading = true;
 
   @override
@@ -34,6 +34,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
         if (mounted) {
           setState(() {
             _adminClinicId = user['clinic_id'] is Map ? (user['clinic_id']['id'] ?? user['clinic_id']['_id']) : user['clinic_id'];
+            _adminBranchId = user['branch_id'] is Map ? (user['branch_id']['id'] ?? user['branch_id']['_id']) : user['branch_id'];
             _isLoading = false;
           });
         }
@@ -44,10 +45,21 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
     }
   }
 
+  // Build the patient query URL with clinic and optional branch filter
+  String _buildPatientQueryUrl() {
+    if (_adminClinicId == null) return '/profiles?role=patient';
+    String url = '/profiles?clinic_id=$_adminClinicId&role=patient';
+    if (_adminBranchId != null) {
+      url += '&branch_id=$_adminBranchId';
+    }
+    return url;
+  }
+
   @override
   void dispose() {
     _searchController.dispose();
     super.dispose();
+
   }
 
   @override
@@ -109,9 +121,7 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                   ),
                 )
               : FutureBuilder(
-            future: _adminClinicId != null 
-                ? ApiService.get('/profiles?clinic_id=$_adminClinicId&role=patient', includeAuth: true)
-                : ApiService.get('/profiles?role=patient', includeAuth: true),
+            future: ApiService.get(_buildPatientQueryUrl(), includeAuth: true),
             builder: (context, snapshot) {
               if (!snapshot.hasData) {
                 return const Center(
@@ -241,6 +251,13 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                               patient['id'],
                               name,
                             );
+                          } else if (val == 'transfer') {
+                            _showTransferDialog(
+                              context,
+                              patient['id'],
+                              name,
+                              patient['branch_id'] is Map ? (patient['branch_id']['id'] ?? patient['branch_id']['_id']) : patient['branch_id'],
+                            );
                           }
                         },
                         icon: const Icon(
@@ -252,6 +269,27 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
                           borderRadius: BorderRadius.circular(15),
                         ),
                         itemBuilder: (context) => [
+                          PopupMenuItem(
+                            value: 'transfer',
+                            child: Row(
+                              children: [
+                                const Icon(
+                                  Icons.swap_horiz_rounded,
+                                  size: 16,
+                                  color: Color(0xFF3B82F6),
+                                ),
+                                const SizedBox(width: 10),
+                                Text(
+                                  'Transfer Branch',
+                                  style: GoogleFonts.outfit(
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF3B82F6),
+                                    fontSize: 13,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
                           PopupMenuItem(
                             value: 'delete',
                             child: Row(
@@ -294,6 +332,101 @@ class _ManagePatientsPageState extends State<ManagePatientsPage> {
           ),
         ),
       ],
+    );
+  }
+
+  void _showTransferDialog(BuildContext context, String patientId, String name, dynamic currentBranchId) {
+    String? selectedBranchId = currentBranchId;
+    bool isSaving = false;
+
+    showDialog(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setModalState) {
+          return AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+            backgroundColor: Colors.white,
+            title: Text(
+              'Transfer $name',
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF0F172A),
+                fontSize: 18,
+              ),
+            ),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Select new branch for patient:', style: GoogleFonts.outfit(fontSize: 13, color: slate)),
+                  const SizedBox(height: 12),
+                  FutureBuilder(
+                    future: ApiService.get('/branches?clinic_id=$_adminClinicId', includeAuth: true),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) return const CircularProgressIndicator();
+                      final branches = snapshot.data as List<dynamic>;
+                      return DropdownButtonFormField<String>(
+                        initialValue: selectedBranchId,
+                        decoration: InputDecoration(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+                        ),
+                        items: branches.map<DropdownMenuItem<String>>((b) {
+                          return DropdownMenuItem<String>(
+                            value: b['id'] ?? b['_id'],
+                            child: Text(b['name']),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          setModalState(() => selectedBranchId = val);
+                        },
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('CANCEL', style: GoogleFonts.outfit(color: slate, fontWeight: FontWeight.w700, fontSize: 13)),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF3B82F6),
+                  elevation: 0,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                ),
+                onPressed: isSaving ? null : () async {
+                  if (selectedBranchId == null || selectedBranchId == currentBranchId) {
+                    Navigator.pop(context);
+                    return;
+                  }
+                  setModalState(() => isSaving = true);
+                  try {
+                    await ApiService.put('/profiles/$patientId', {'branch_id': selectedBranchId}, includeAuth: true);
+                    if (context.mounted) {
+                      Navigator.pop(context);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Patient Transferred Successfully')));
+                      setState(() {});
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red));
+                      setModalState(() => isSaving = false);
+                    }
+                  }
+                },
+                child: isSaving 
+                    ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : Text('TRANSFER', style: GoogleFonts.outfit(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 11)),
+              ),
+            ],
+          );
+        }
+      ),
     );
   }
 

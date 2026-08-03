@@ -377,9 +377,13 @@ class _AssessmentRepositoryState extends State<AssessmentRepository> {
           final type = doc['type']?.toString().toUpperCase() ?? '';
           if (type == 'PDF') {
             extension = '.pdf';
-          } else if (type == 'IMAGE') extension = '.png';
-          else if (type == 'VIDEO') extension = '.mp4';
-          else if (type == 'AUDIO') extension = '.m4a';
+          } else if (type == 'IMAGE') {
+            extension = '.png';
+          } else if (type == 'VIDEO') {
+            extension = '.mp4';
+          } else if (type == 'AUDIO') {
+            extension = '.m4a';
+          }
         }
         
         final safeFileName = fileName.replaceAll(RegExp(r'[^\w\.\-]'), '_');

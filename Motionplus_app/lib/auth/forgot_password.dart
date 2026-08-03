@@ -48,12 +48,6 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
           SnackBar(content: Text(e.toString()), backgroundColor: Colors.red),
         );
       }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
-        );
-      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -256,12 +250,6 @@ class _VerifyOtpScreenState extends State<VerifyOtpScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Invalid or expired OTP: $e'), backgroundColor: Colors.red),
-        );
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error: $e'), backgroundColor: Colors.red),
         );
       }
     } finally {

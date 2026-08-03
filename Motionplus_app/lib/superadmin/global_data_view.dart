@@ -153,12 +153,36 @@ class _GlobalDataViewState extends State<GlobalDataView>
             color: Theme.of(context).colorScheme.onSurface,
           ),
         ),
-        subtitle: Text(
-          user['email'] ?? 'No email provided',
-          style: GoogleFonts.outfit(
-            fontSize: 12,
-            color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-          ),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              user['email'] ?? 'No email provided',
+              style: GoogleFonts.outfit(
+                fontSize: 12,
+                color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+              ),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              () {
+                String clinic = 'Unknown Clinic';
+                String branch = 'No Branch';
+                if (user['clinic_id'] is Map) {
+                  clinic = user['clinic_id']['name'] ?? clinic;
+                }
+                if (user['branch_id'] is Map) {
+                  branch = user['branch_id']['name'] ?? branch;
+                }
+                return '$clinic • $branch';
+              }(),
+              style: GoogleFonts.outfit(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF3B82F6),
+              ),
+            ),
+          ],
         ),
         trailing: Icon(
           Icons.chevron_right_rounded,

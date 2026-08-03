@@ -1,9 +1,10 @@
 const mongoose = require('mongoose');
 
 const sessionSchema = new mongoose.Schema({
-    patient_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Profile', required: true },
-    clinic_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true },
-    therapist_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Profile' },
+    patient_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Profile', required: true },
+    clinic_id:   { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic', required: true },
+    branch_id:   { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
+    therapist_id:{ type: mongoose.Schema.Types.ObjectId, ref: 'Profile' },
     specialization_required: { type: String, default: 'ortho' },
     fee_charged: { type: Number, required: true },
     status: { type: String, enum: ['pending', 'requested', 'assigned', 'in_progress', 'completed', 'cancelled'], default: 'pending' },

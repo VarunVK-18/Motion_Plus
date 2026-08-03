@@ -13,7 +13,16 @@ exports.getAll = async (req, res) => {
 
 exports.create = async (req, res) => {
     try {
-        const item = new PatientDocument(req.body);
+        const docData = { ...req.body };
+        
+        if (req.file) {
+            // Store the relative path. Assuming backend runs on port 5000 and base URL is handled by client or proxy
+            // Alternatively, just store the path so frontend can append the base URL
+            docData.file_url = `/uploads/documents/${req.file.filename}`;
+            docData.file_name = docData.file_name || req.file.originalname;
+        }
+
+        const item = new PatientDocument(docData);
         await item.save();
         res.status(201).json({ ...item.toObject(), id: item._id.toString() });
     } catch (error) {

@@ -7,7 +7,7 @@ const bcrypt = require('bcryptjs');
 // @access  Public
 const registerUser = async (req, res) => {
     try {
-        const { first_name, last_name, phone, role, email, password, clinic_id, specialization } = req.body;
+        const { first_name, last_name, phone, role, email, password, clinic_id, branch_id, branch_ids, specialization } = req.body;
 
         if (!email || !/^\S+@\S+\.\S+$/.test(email)) {
             return res.status(400).json({ message: 'Invalid email format' });
@@ -34,6 +34,8 @@ const registerUser = async (req, res) => {
             email,
             password,
             clinic_id,
+            branch_id: branch_id || null,
+            branch_ids: branch_ids || [], // For floating therapists
             specialization
         });
 
@@ -60,10 +62,10 @@ const registerUser = async (req, res) => {
 // @access  Public
 const loginUser = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, company_code } = req.body;
 
         // Case-insensitive email lookup
-        const user = await Profile.findOne({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } });
+        const user = await Profile.findOne({ email: { $regex: new RegExp(`^${email.trim()}$`, 'i') } }).populate('clinic_id');
 
         if (!user) {
             return res.status(401).json({ message: 'invalid email id' });
@@ -73,6 +75,15 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ message: 'your entered password is wrong' });
         }
 
+        if (user.role === 'patient') {
+            if (!company_code) {
+                return res.status(401).json({ message: 'Company code is required' });
+            }
+            if (user.clinic_id && user.clinic_id.company_code !== company_code.trim()) {
+                return res.status(401).json({ message: 'Invalid Clinic Code for this account' });
+            }
+        }
+
         res.json({
             _id: user._id,
             first_name: user.first_name,
@@ -80,7 +91,8 @@ const loginUser = async (req, res) => {
             full_name: user.full_name,
             email: user.email,
             role: user.role,
-            clinic_id: user.clinic_id,
+            clinic_id: user.clinic_id ? (user.clinic_id._id || user.clinic_id) : null,
+            branch_id: user.branch_id,
             token: generateToken(user._id),
         });
     } catch (error) {

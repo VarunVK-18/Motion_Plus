@@ -9,7 +9,9 @@ const profileSchema = new mongoose.Schema({
     role: { type: String, enum: ['patient', 'therapist', 'therapist_assistant', 'admin', 'superadmin'], default: 'patient' },
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
-    clinic_id: { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' },
+    clinic_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Clinic' },
+    branch_id:  { type: mongoose.Schema.Types.ObjectId, ref: 'Branch' },
+    branch_ids: [{ type: mongoose.Schema.Types.ObjectId, ref: 'Branch' }], // For floating therapists
     specialization: { type: String },
     avatar_url: { type: String }, // Can be Base64 string if file is small
     fcmTokens: [String], // Store multiple device tokens

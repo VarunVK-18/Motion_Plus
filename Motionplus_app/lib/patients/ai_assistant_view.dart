@@ -90,6 +90,35 @@ class _AIAssistantViewState extends State<AIAssistantView> {
     });
   }
 
+  void _confirmClearChat() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Clear Conversation?', style: GoogleFonts.outfit(fontWeight: FontWeight.w600, color: darkSlate)),
+        content: Text('Are you sure you want to delete this conversation?', style: GoogleFonts.outfit(color: darkSlate)),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.outfit(color: darkSlate, fontWeight: FontWeight.w600)),
+          ),
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() {
+                _messages.clear();
+                _messages.add({
+                  'isUser': false,
+                  'text': 'Hello! I am your AI Physio Assistant. How can I help you today?',
+                });
+              });
+            },
+            child: Text('Clear', style: GoogleFonts.outfit(color: darkSlate, fontWeight: FontWeight.w600)),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   void dispose() {
     _chatController.dispose();
@@ -113,6 +142,18 @@ class _AIAssistantViewState extends State<AIAssistantView> {
               backgroundColor: Colors.white,
               elevation: 1,
               iconTheme: const IconThemeData(color: darkSlate),
+              actions: [
+                TextButton(
+                  onPressed: _confirmClearChat,
+                  child: Text(
+                    'Clear Chat',
+                    style: GoogleFonts.outfit(
+                      color: softSlate,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             )
           : null,
       body: _buildChatInterface(),
@@ -122,6 +163,25 @@ class _AIAssistantViewState extends State<AIAssistantView> {
   Widget _buildChatInterface() {
     return Column(
       children: [
+        if (!widget.showAppBar)
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton(
+                  onPressed: _confirmClearChat,
+                  child: Text(
+                    'Clear Chat',
+                    style: GoogleFonts.outfit(
+                      color: softSlate,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
         Expanded(
           child: ListView.builder(
             controller: _scrollController,

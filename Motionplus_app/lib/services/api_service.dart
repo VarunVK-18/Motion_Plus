@@ -151,4 +151,32 @@ class ApiService {
       throw Exception(errorMessage);
     }
   }
+
+  static Future<dynamic> postMultipart(
+    String endpoint, 
+    String filePath, 
+    Map<String, String> fields,
+    {bool includeAuth = true, String fileField = 'file'}
+  ) async {
+    try {
+      await _checkConnectivity();
+      final url = '$baseUrl$endpoint';
+      final request = http.MultipartRequest('POST', Uri.parse(url));
+      final headers = await _getHeaders(includeAuth: includeAuth);
+      
+      request.headers.addAll(headers);
+      request.fields.addAll(fields);
+      
+      request.files.add(await http.MultipartFile.fromPath(fileField, filePath));
+      
+      debugPrint('API POST MULTIPART: $url');
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+      
+      return _processResponse(response);
+    } catch (e) {
+      debugPrint('API POST MULTIPART ERROR: $e');
+      throw Exception('Network error: $e');
+    }
+  }
 }

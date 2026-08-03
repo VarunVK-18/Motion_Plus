@@ -8,7 +8,7 @@ class BluetoothScannerDialog extends StatefulWidget {
   const BluetoothScannerDialog({super.key});
 
   @override
-  _BluetoothScannerDialogState createState() => _BluetoothScannerDialogState();
+  State<BluetoothScannerDialog> createState() => _BluetoothScannerDialogState();
 }
 
 class _BluetoothScannerDialogState extends State<BluetoothScannerDialog> {

@@ -65,9 +65,7 @@ class ExerciseTrackerPage extends StatefulWidget {
   State<ExerciseTrackerPage> createState() => _ExerciseTrackerPageState();
 }
 
-class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
-    with TickerProviderStateMixin {
-  late TabController _tabController;
+class _ExerciseTrackerPageState extends State<ExerciseTrackerPage> {
   final TextEditingController _reasonController = TextEditingController();
   String _selectedBodyPart = 'All';
 
@@ -342,9 +340,6 @@ class _ExerciseTrackerPageState extends State<ExerciseTrackerPage>
     Color darkSlate,
     Color softSlate,
   ) {
-    bool isFinished =
-        exercise.currentSets >= exercise.targetSets ||
-        exercise.status != CompletionStatus.pending;
     bool isTherapist = exercise.category == ExerciseCategory.therapist;
 
     return Container(

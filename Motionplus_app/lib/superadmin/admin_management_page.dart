@@ -28,6 +28,9 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
   String? _selectedClinicId;
   List<dynamic> _clinics = [];
 
+  // Branch state for admin registration
+  String? _selectedBranchId;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +57,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
       debugPrint('Error fetching clinics: \$e');
     }
   }
+
 
   void _showCreateAdminDialog() {
     showDialog(
@@ -244,6 +248,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
         'phone': _phoneController.text.trim(),
         'role': 'admin',
         'clinic_id': _selectedClinicId,
+        if (_selectedBranchId != null) 'branch_id': _selectedBranchId,
       }, includeAuth: false);
 
       if (mounted) {
@@ -269,6 +274,7 @@ class _AdminManagementPageState extends State<AdminManagementPage> {
     _confirmPasswordController.clear();
     setState(() {
       _selectedClinicId = null;
+      _selectedBranchId = null;
     });
   }
 

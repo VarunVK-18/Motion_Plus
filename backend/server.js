@@ -11,6 +11,7 @@ firebaseAdmin.initializeFirebase();
 
 const authRouter = require('./routers/authRouter');
 const clinicRouter = require('./routers/clinicRouter');
+const branchRouter = require('./routers/branchRouter');
 const settingRouter = require('./routers/settingRouter');
 const profileRouter = require('./routers/profileRouter');
 const prescribedExerciseRouter = require('./routers/prescribedExerciseRouter');
@@ -42,8 +43,20 @@ const { sendPushNotification } = require('./firebaseAdmin');
 // Connect to MongoDB
 
 connectDB();
-
+const path = require('path');
+const morgan = require('morgan');
+const logger = require('./utils/logger');
 const app = express();
+
+// HTTP Request logging with Morgan and Winston
+app.use(morgan('combined', {
+    stream: {
+        write: (message) => logger.info(message.trim())
+    }
+}));
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 // Middleware
 app.use(cors());
@@ -53,6 +66,7 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Routes
 app.use('/api/auth', authRouter);
 app.use('/api/clinics', clinicRouter);
+app.use('/api/branches', branchRouter);
 app.use('/api/settings', settingRouter);
 app.use('/api/profiles', profileRouter);
 app.use('/api/prescribed_exercises', prescribedExerciseRouter);
@@ -196,6 +210,16 @@ cron.schedule('0 * * * *', async () => {
     } catch (error) {
         console.error('Error in contextual FCM cron job:', error);
     }
+});
+
+// Global Error Handling Middleware
+app.use((err, req, res, next) => {
+    logger.error(`${err.message} - ${req.originalUrl} - ${req.method} - ${req.ip}`, { error: err });
+    const statusCode = res.statusCode === 200 ? 500 : res.statusCode;
+    res.status(statusCode).json({
+        message: err.message || 'Internal Server Error',
+        stack: process.env.NODE_ENV === 'production' ? null : err.stack
+    });
 });
 
 const server = http.createServer(app);

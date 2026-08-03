@@ -1,11 +1,11 @@
 import 'dart:async';
 import 'package:flutter/foundation.dart';
-import 'package:socket_io_client/socket_io_client.dart' as IO;
+import 'package:socket_io_client/socket_io_client.dart' as io;
 import '../core/constants/port.dart';
 import '../notifications/notification_service.dart';
 
 class SocketService {
-  static IO.Socket? _socket;
+  static io.Socket? _socket;
   static final _messageController = StreamController<Map<String, dynamic>>.broadcast();
 
   static Stream<Map<String, dynamic>> get onNewMessage => _messageController.stream;
@@ -13,7 +13,7 @@ class SocketService {
   static void initializeSocket(String userId) {
     if (_socket != null && _socket!.connected) return;
 
-    _socket = IO.io(PortConstants.backendUrl, <String, dynamic>{
+    _socket = io.io(PortConstants.backendUrl, <String, dynamic>{
       'transports': ['websocket'],
       'autoConnect': false,
       'query': {'userId': userId},
@@ -48,7 +48,7 @@ class SocketService {
     _socket!.connect();
   }
 
-  static IO.Socket? get socket => _socket;
+  static io.Socket? get socket => _socket;
 
   static void disconnect() {
     if (_socket != null) {

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter/services.dart';
@@ -16,11 +17,46 @@ class PatientLoginPage extends StatefulWidget {
 class _PatientLoginPageState extends State<PatientLoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _codeController = TextEditingController();
   bool _isLoading = false;
   bool _obscurePassword = true;
+  Timer? _debounce;
+  bool _isVerifying = false;
+  String? _verifiedClinicName;
+
+  void _onCodeChanged(String value) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    if (value.trim().isEmpty) {
+      setState(() {
+        _verifiedClinicName = null;
+        _isVerifying = false;
+      });
+      return;
+    }
+    
+    setState(() => _isVerifying = true);
+    _debounce = Timer(const Duration(milliseconds: 600), () async {
+      try {
+        final response = await ApiService.get('/clinics/verify/${value.trim()}', includeAuth: false);
+        if (mounted && response != null && response['name'] != null) {
+          setState(() {
+            _verifiedClinicName = response['name'];
+            _isVerifying = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) {
+          setState(() {
+            _verifiedClinicName = null;
+            _isVerifying = false;
+          });
+        }
+      }
+    });
+  }
 
   Future<void> _signIn() async {
-    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty || _codeController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill in all fields'),
@@ -37,6 +73,7 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
       final response = await ApiService.post('/auth/login', {
         'email': _emailController.text.trim(),
         'password': _passwordController.text.trim(),
+        'company_code': _codeController.text.trim(),
       }, includeAuth: false);
 
       if (response != null && response['token'] != null) {
@@ -67,8 +104,10 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _emailController.dispose();
     _passwordController.dispose();
+    _codeController.dispose();
     super.dispose();
   }
 
@@ -142,7 +181,42 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Input Fields
-                        _buildLabel('Client EMAIL'),
+                        _buildLabel('CLINIC CODE'),
+                        _buildTextField(
+                          controller: _codeController,
+                          hint: 'e.g. CLI@1',
+                          icon: Icons.tag_rounded,
+                          onChanged: _onCodeChanged,
+                        ),
+                        if (_isVerifying)
+                          const Padding(
+                            padding: EdgeInsets.only(top: 8.0, left: 4.0),
+                            child: SizedBox(
+                              height: 12,
+                              width: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            ),
+                          ),
+                        if (_verifiedClinicName != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0, left: 4.0),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.check_circle_rounded, color: Colors.green, size: 14),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'Verified: ${_verifiedClinicName!}',
+                                  style: GoogleFonts.outfit(
+                                    fontSize: 12,
+                                    color: Colors.green,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        const SizedBox(height: 24),
+                        _buildLabel('CLIENT EMAIL'),
                         _buildTextField(
                           controller: _emailController,
                           hint: 'email@domain.com',
@@ -288,6 +362,7 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
     TextInputType type = TextInputType.text,
     FocusNode? focusNode,
     Iterable<String>? autofillHints,
+    Function(String)? onChanged,
   }) {
     return Container(
       decoration: BoxDecoration(
@@ -301,6 +376,7 @@ class _PatientLoginPageState extends State<PatientLoginPage> {
         obscureText: isPassword ? _obscurePassword : false,
         keyboardType: type,
         autofillHints: autofillHints,
+        onChanged: onChanged,
         style: GoogleFonts.outfit(
           fontWeight: FontWeight.w600,
           color: const Color(0xFF1E293B),

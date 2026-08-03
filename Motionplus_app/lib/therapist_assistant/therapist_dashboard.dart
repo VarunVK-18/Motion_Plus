@@ -3,12 +3,12 @@ import 'package:flutter/material.dart';
 import '../services/api_service.dart';
 import 'package:intl/intl.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../selection_page.dart';
 import '../shared/chat_page.dart';
 import '../patients/patient_profile_page.dart';
 import '../shared/specialization_colors.dart';
 import '../services/audit_logger.dart';
+import 'package:file_picker/file_picker.dart' as fp;
 import 'package:hugeicons/hugeicons.dart';
 
 class TherapistDashboard extends StatefulWidget {
@@ -1179,30 +1179,6 @@ class _SessionCardState extends State<_SessionCard> {
     }
   }
 
-  Future<void> _makeCall(String phoneNumber) async {
-    // Remove all non-numeric characters except the plus sign
-    final String cleanPhone = phoneNumber.replaceAll(RegExp(r'[^0-9+]'), '');
-    final Uri launchUri = Uri.parse('tel:$cleanPhone');
-
-    try {
-      // Try launching with external application mode first (opens dialer directly)
-      final success = await launchUrl(
-        launchUri,
-        mode: LaunchMode.externalApplication,
-      );
-      if (!success) {
-        // Fallback to platform default if external app fails
-        await launchUrl(launchUri, mode: LaunchMode.platformDefault);
-      }
-    } catch (e) {
-      debugPrint('Could not launch $launchUri: $e');
-      // Final attempt with plain launchUrl
-      try {
-        await launchUrl(launchUri);
-      } catch (_) {}
-    }
-  }
-
   void _showSkipReason(BuildContext context, String name, String reason) {
     showDialog(
       context: context,
@@ -1584,7 +1560,7 @@ class _SessionCardState extends State<_SessionCard> {
     final spec = session['specialization_required'].toString().toUpperCase();
     final status = session['status'];
     final isInProgress = status == 'in_progress';
-    final accentColor = const Color(0xFF3E84DC); // Simplified for demo
+
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -2032,12 +2008,93 @@ class _SessionCardState extends State<_SessionCard> {
                     ),
                   ],
                 ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  height: 46,
+                  child: ElevatedButton.icon(
+                    onPressed: () => _uploadDocument(
+                      (session['patient_id'] is Map) ? (session['patient_id']['id'] ?? session['patient_id']['_id']).toString() : session['patient_id'].toString()
+                    ),
+                    icon: const Icon(Icons.upload_file_rounded, size: 18),
+                    label: Text(
+                      'Upload Case File (PDF)',
+                      style: GoogleFonts.outfit(
+                        fontWeight: FontWeight.w800,
+                        fontSize: 11,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: const Color(0xFF475569),
+                      side: const BorderSide(color: Color(0xFFE2E8F0)),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 0,
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
         ],
       ),
     );
+  }
+
+  Future<void> _uploadDocument(String patientId) async {
+    try {
+      final result = await fp.FilePicker.pickFiles(
+        type: fp.FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null && result.files.single.path != null) {
+        final filePath = result.files.single.path!;
+        final fileName = result.files.single.name;
+
+        // Show loading indicator
+        if (!mounted) return;
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => const Center(child: CircularProgressIndicator()),
+        );
+
+        await ApiService.postMultipart(
+          '/patient_documents',
+          filePath,
+          {
+            'patient_id': patientId,
+            'document_type': 'case_file',
+            'file_name': fileName,
+          },
+          includeAuth: true,
+        );
+
+        // Hide loading indicator
+        if (!mounted) return;
+        Navigator.pop(context);
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Document uploaded successfully'),
+            backgroundColor: const Color(0xFF10B981),
+          ),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context); // Hide loading indicator if open
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error uploading document: $e'),
+          backgroundColor: const Color(0xFFBE123C),
+        ),
+      );
+    }
   }
 
   void _showPicker() {
@@ -2172,13 +2229,6 @@ class _SessionCardState extends State<_SessionCard> {
         ],
       ),
     );
-  }
-
-  Color _getColor(String s) {
-    if (s == 'ORTHO') return const Color(0xFFB45309);
-    if (s == 'NEURO') return const Color(0xFF2D6A4F);
-    if (s == 'CARDIO') return const Color(0xFFBE123C);
-    return const Color(0xFF3E84DC);
   }
 
   Widget _typeBadge(String type) => Container(
@@ -2649,35 +2699,4 @@ class _TherapistHistoryPage extends StatelessWidget {
     ),
   );
 
-  Widget _statBox(String label, String value, Color color) => Expanded(
-    child: Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.05),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: color.withValues(alpha: 0.1)),
-      ),
-      child: Column(
-        children: [
-          Text(
-            label,
-            style: GoogleFonts.outfit(
-              fontSize: 9,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            value,
-            style: GoogleFonts.outfit(
-              fontSize: 20,
-              fontWeight: FontWeight.w800,
-              color: color,
-            ),
-          ),
-        ],
-      ),
-    ),
-  );
 }

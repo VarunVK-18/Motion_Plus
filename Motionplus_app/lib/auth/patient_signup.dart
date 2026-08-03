@@ -24,6 +24,11 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
   String? _selectedClinicId;
   bool _isLoadingClinics = true;
 
+  // Branch state
+  List<Map<String, dynamic>> _branches = [];
+  String? _selectedBranchId;
+  bool _isLoadingBranches = false;
+
   @override
   void initState() {
     super.initState();
@@ -41,9 +46,33 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       }
     } catch (e) {
       if (mounted) setState(() => _isLoadingClinics = false);
-      debugPrint('Error fetching clinics: \$e');
+      debugPrint('Error fetching clinics: $e');
     }
   }
+
+  Future<void> _fetchBranches(String clinicId) async {
+    setState(() {
+      _isLoadingBranches = true;
+      _branches = [];
+      _selectedBranchId = null;
+    });
+    try {
+      final response = await ApiService.get(
+        '/branches/public?clinic_id=$clinicId',
+        includeAuth: false,
+      );
+      if (mounted) {
+        setState(() {
+          _branches = List<Map<String, dynamic>>.from(response);
+          _isLoadingBranches = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() => _isLoadingBranches = false);
+      debugPrint('Error fetching branches: $e');
+    }
+  }
+
 
   Future<void> _signUp() async {
     final email = _emailController.text.trim();
@@ -57,6 +86,16 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Please fill all required fields and select a clinic'),
+          backgroundColor: Color(0xFFEF4444),
+        ),
+      );
+      return;
+    }
+
+    if (_branches.isNotEmpty && _selectedBranchId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please select a branch for this clinic'),
           backgroundColor: Color(0xFFEF4444),
         ),
       );
@@ -87,6 +126,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
         'email': email,
         'password': password,
         'clinic_id': _selectedClinicId,
+        if (_selectedBranchId != null) 'branch_id': _selectedBranchId,
       }, includeAuth: false);
 
       if (response != null) {
@@ -251,7 +291,38 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
                   _buildLabel('SELECT CLINIC'),
                   _isLoadingClinics
                       ? const Center(child: CircularProgressIndicator())
-                      : _buildDropdown(),
+                      : _buildClinicDropdown(),
+                  // Branch dropdown — appears after clinic is chosen
+                  if (_selectedClinicId != null) ...[
+                    const SizedBox(height: 20),
+                    _buildLabel('SELECT BRANCH'),
+                    _isLoadingBranches
+                        ? const Center(
+                            child: Padding(
+                              padding: EdgeInsets.symmetric(vertical: 12),
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                        : _branches.isEmpty
+                            ? Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFF8FAFC),
+                                  borderRadius: BorderRadius.circular(16),
+                                  border: Border.all(
+                                      color: Colors.grey.withValues(alpha: 0.2)),
+                                ),
+                                child: Text(
+                                  'No branches available for this clinic',
+                                  style: GoogleFonts.outfit(
+                                    color: const Color(0xFF94A3B8),
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              )
+                            : _buildBranchDropdown(),
+                  ],
                   const SizedBox(height: 20),
                   _buildLabel('CREATE PASSWORD'),
                   _buildTextField(
@@ -401,7 +472,7 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
     );
   }
 
-  Widget _buildDropdown() {
+  Widget _buildClinicDropdown() {
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFFF8FAFC),
@@ -409,23 +480,31 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
         border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
       ),
       child: DropdownButtonFormField2<String>(
+        isExpanded: true,
         valueListenable: ValueNotifier(_selectedClinicId),
         items: _clinics.map((clinic) {
           return DropdownItem<String>(
-            value: clinic['id'],
+            value: clinic['id'] ?? clinic['_id'],
             child: Text(
-              clinic['name'],
+              clinic['company_code'] != null 
+                  ? '${clinic['name']} (${clinic['company_code']})'
+                  : clinic['name'],
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.w600,
                 color: const Color(0xFF1E293B),
               ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
             ),
           );
         }).toList(),
         onChanged: (value) {
           setState(() {
             _selectedClinicId = value;
+            _branches = [];
+            _selectedBranchId = null;
           });
+          if (value != null) _fetchBranches(value);
         },
         decoration: InputDecoration(
           hintText: 'Choose your clinic',
@@ -458,4 +537,64 @@ class _PatientSignUpPageState extends State<PatientSignUpPage> {
       ),
     );
   }
+
+  Widget _buildBranchDropdown() {
+    return Container(
+      decoration: BoxDecoration(
+        color: const Color(0xFFF8FAFC),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
+      ),
+      child: DropdownButtonFormField2<String>(
+        isExpanded: true,
+        valueListenable: ValueNotifier(_selectedBranchId),
+        items: _branches.map((branch) {
+          return DropdownItem<String>(
+            value: branch['id'] ?? branch['_id'],
+            child: Text(
+              branch['name'],
+              style: GoogleFonts.outfit(
+                fontWeight: FontWeight.w600,
+                color: const Color(0xFF1E293B),
+              ),
+              overflow: TextOverflow.ellipsis,
+              maxLines: 1,
+            ),
+          );
+        }).toList(),
+        onChanged: (value) {
+          setState(() => _selectedBranchId = value);
+        },
+        decoration: InputDecoration(
+          hintText: 'Choose your branch location',
+          hintStyle: GoogleFonts.outfit(
+            color: const Color(0xFFCBD5E1),
+            fontWeight: FontWeight.w500,
+          ),
+          prefixIcon: const Icon(Icons.store_rounded, size: 20, color: Color(0xFF94A3B8)),
+          border: InputBorder.none,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 20,
+            vertical: 16,
+          ),
+        ),
+        buttonStyleData: const FormFieldButtonStyleData(
+          padding: EdgeInsets.only(right: 8),
+        ),
+        dropdownStyleData: DropdownStyleData(
+          maxHeight: 250,
+          elevation: 0,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.grey.withValues(alpha: 0.2), width: 1.0),
+            color: Colors.white,
+          ),
+        ),
+        iconStyleData: const IconStyleData(
+          icon: Icon(Icons.arrow_drop_down, color: Color(0xFF94A3B8)),
+        ),
+      ),
+    );
+  }
 }
+

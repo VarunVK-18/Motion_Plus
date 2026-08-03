@@ -18,10 +18,39 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
   String selectedFilter = 'This Month';
   DateTimeRange? customRange;
 
+  String? _userRole;
+  String? _userClinicId;
+  String? _selectedClinicId;
+  List<dynamic> _clinics = [];
+  bool _isLoadingInitial = true;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    try {
+      final profile = await ApiService.get('/auth/me', includeAuth: true);
+      _userRole = profile['role'];
+      
+      if (_userRole == 'admin' || _userRole == 'therapist' || _userRole == 'therapist_assistant') {
+        _userClinicId = profile['clinic_id']?['_id'] ?? profile['clinic_id'];
+        _selectedClinicId = _userClinicId;
+      } else if (_userRole == 'superadmin') {
+        final clinicsData = await ApiService.get('/clinics', includeAuth: true);
+        _clinics = clinicsData as List<dynamic>;
+        if (_clinics.isNotEmpty) {
+          _selectedClinicId = _clinics.first['id'] ?? _clinics.first['_id'];
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading profile in financials: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingInitial = false);
+    }
   }
 
   @override
@@ -74,10 +103,46 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
           ],
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [_buildPackagesTab(), _buildRevenueOverviewStream()],
-      ),
+      body: _isLoadingInitial
+          ? const Center(child: CircularProgressIndicator())
+          : Column(
+              children: [
+                if (_userRole == 'superadmin' && _clinics.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    color: Theme.of(context).cardColor,
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedClinicId,
+                        icon: Icon(Icons.business_rounded, color: Theme.of(context).colorScheme.primary),
+                        items: _clinics.map((c) {
+                          final cId = (c['id'] ?? c['_id']).toString();
+                          return DropdownMenuItem<String>(
+                            value: cId,
+                            child: Text(
+                              c['name'] ?? 'Unknown Clinic',
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 16),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedClinicId = val);
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                Expanded(
+                  child: TabBarView(
+                    controller: _tabController,
+                    children: [_buildPackagesTab(), _buildRevenueOverviewStream()],
+                  ),
+                ),
+              ],
+            ),
     );
   }
 
@@ -136,11 +201,27 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
             onPressed: () async {
               final newPrice = controller.text;
               Navigator.pop(context); // close dialog immediately for UX
+              
+              if (_selectedClinicId == null) {
+                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please select a clinic first.')));
+                 return;
+              }
+
               try {
-                await ApiService.post('/settings', {
-                  'key': 'pkg_$title',
-                  'value': newPrice,
+                // Fetch current clinic to get existing pricing map
+                final clinicData = await ApiService.get('/clinics/$_selectedClinicId', includeAuth: true);
+                Map<String, dynamic> currentPricing = clinicData['pricing'] != null 
+                    ? Map<String, dynamic>.from(clinicData['pricing']) 
+                    : {};
+                
+                // Update the specific package price
+                currentPricing['pkg_$title'] = newPrice;
+                
+                // Send the updated pricing map
+                await ApiService.put('/clinics/$_selectedClinicId', {
+                  'pricing': currentPricing,
                 }, includeAuth: true);
+                
                 if (mounted) setState(() {});
               } catch (e) {
                 if (!context.mounted) return;
@@ -166,15 +247,18 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
   }
 
   Widget _buildPackagesTab() {
+    if (_selectedClinicId == null) {
+      return Center(child: Text('Please select a clinic to view pricing.', style: GoogleFonts.outfit(fontSize: 16, color: Colors.grey)));
+    }
+
     return FutureBuilder(
-      future: ApiService.get('/settings', includeAuth: true),
+      future: ApiService.get('/clinics/$_selectedClinicId', includeAuth: true),
       builder: (context, snapshot) {
-        final settings = {
-          for (var s in ((snapshot.data as List?)?.map((e) => Map<String, dynamic>.from(e as Map)).toList() ?? <Map<String, dynamic>>[])) s['key']: s['value'],
-        };
+        final clinic = snapshot.data as Map<String, dynamic>? ?? {};
+        final pricing = clinic['pricing'] as Map<String, dynamic>? ?? {};
         
         String getPrice(String title) {
-          return settings['pkg_$title']?.toString() ?? _packagePrices[title]!;
+          return pricing['pkg_$title']?.toString() ?? _packagePrices[title]!;
         }
 
         return ListView(
@@ -321,12 +405,17 @@ class _FinancialManagementPageState extends State<FinancialManagementPage>
   }
 
   Widget _buildRevenueOverviewStream() {
+    String sessionsEndpoint = '/sessions';
+    if (_userRole == 'superadmin' && _selectedClinicId != null) {
+      sessionsEndpoint = '/sessions?clinic_id=$_selectedClinicId';
+    }
+    
     return Column(
       children: [
         _buildDateFilter(),
         Expanded(
           child: FutureBuilder(
-            future: ApiService.get('/sessions', includeAuth: true),
+            future: ApiService.get(sessionsEndpoint, includeAuth: true),
             builder: (context, snapshot) {
               if (snapshot.hasError) {
                 return Center(

@@ -179,7 +179,9 @@ class _MorningFormScreenState extends State<MorningFormScreen> {
             ...options.map((option) => RadioListTile<String>(
                   title: Text(option, style: GoogleFonts.outfit(fontSize: 14)),
                   value: option,
+                  // ignore: deprecated_member_use
                   groupValue: groupValue,
+                  // ignore: deprecated_member_use
                   onChanged: onChanged,
                   activeColor: forestGreen,
                   contentPadding: EdgeInsets.zero,

@@ -384,18 +384,29 @@ class _CreateSessionPageState extends State<CreateSessionPage> {
                 const SizedBox(height: 18),
                 _buildSectionTitle('Payment Package', Icons.local_offer_outlined),
                 FutureBuilder(
-                  future: ApiService.get('/settings', includeAuth: true),
+                  future: _adminClinicId != null 
+                      ? ApiService.get('/clinics/$_adminClinicId', includeAuth: true) 
+                      : Future.value(null),
                   builder: (context, snapshot) {
-                    if (snapshot.hasData) {
-                      final settings = {
-                        for (var s in (snapshot.data as List)) s['key']: s['value'],
-                      };
+                    if (snapshot.hasData && snapshot.data != null) {
+                      final clinicData = snapshot.data as Map<String, dynamic>;
+                      final pricing = clinicData['pricing'] as Map<String, dynamic>? ?? {};
+                      
                       _livePackages = {
-                        'Session-based Packages': settings['pkg_Session-based Packages']?.toString() ?? '500',
-                        'Monthly Rehab Packages': settings['pkg_Monthly Rehab Packages']?.toString() ?? '15000',
-                        'Pediatric Therapy Packages': settings['pkg_Pediatric Therapy Packages']?.toString() ?? 'Custom',
-                        'Hybrid Therapy Packages': settings['pkg_Hybrid Therapy Packages']?.toString() ?? 'Flexible',
-                        'Online Consulting': settings['pkg_Online Consulting']?.toString() ?? '999',
+                        'Session-based Packages': pricing['pkg_Session-based Packages']?.toString() ?? '500',
+                        'Monthly Rehab Packages': pricing['pkg_Monthly Rehab Packages']?.toString() ?? '15000',
+                        'Pediatric Therapy Packages': pricing['pkg_Pediatric Therapy Packages']?.toString() ?? 'Custom',
+                        'Hybrid Therapy Packages': pricing['pkg_Hybrid Therapy Packages']?.toString() ?? 'Flexible',
+                        'Online Consulting': pricing['pkg_Online Consulting']?.toString() ?? '999',
+                      };
+                    } else if (snapshot.connectionState == ConnectionState.done) {
+                      // Fallback if no clinic data
+                      _livePackages = {
+                        'Session-based Packages': '500',
+                        'Monthly Rehab Packages': '15000',
+                        'Pediatric Therapy Packages': 'Custom',
+                        'Hybrid Therapy Packages': 'Flexible',
+                        'Online Consulting': '999',
                       };
                     }
 

@@ -322,7 +322,7 @@ class _SuperAdminDashboardState extends State<SuperAdminDashboard> {
                   _buildDrawerItem(
                     context: context,
                     icon: HugeIcons.strokeRoundedUserGroup,
-                    title: 'Clinic Management',
+                    title: 'Global Data View',
                     onTap: () => _navigateTo(const GlobalDataView()),
                   ),
                   Padding(

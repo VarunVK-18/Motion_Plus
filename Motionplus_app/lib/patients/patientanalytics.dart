@@ -23,7 +23,6 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
   int _todaySteps = 0;
   int _stepGoal = 10000;
   int _lastBpm = 72;
-  int _pendingReminders = 3;
   DateTimeRange? _selectedDateRange;
   late Future<List<dynamic>> _dataFuture;
 
@@ -62,7 +61,6 @@ class _PatientAnalyticsPageState extends State<PatientAnalyticsPage> {
       setState(() {
         _stepGoal = prefs.getInt('step_goal') ?? 10000;
         _lastBpm = prefs.getInt('last_known_bpm') ?? 72;
-        _pendingReminders = prefs.getInt('pending_reminders') ?? 3;
 
         if (lastSavedDate == today) {
           _todaySteps = prefs.getInt('last_known_steps') ?? 0;

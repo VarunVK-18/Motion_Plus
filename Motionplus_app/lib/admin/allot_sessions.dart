@@ -70,7 +70,6 @@ class _AllotSessionsPageState extends State<AllotSessionsPage> {
   static const Color primaryGreen = Color(0xFF2D6A4F);
   static const Color softSage = Color(0xFFF0FAF7);
   static const Color honeyAmber = Color(0xFFB45309);
-  static const Color softAmber = Color(0xFFFFFBEB);
   static const Color slate = Color(0xFF475569);
 
   Future<void> _allotTherapist(String sessionId, String specialization) async {

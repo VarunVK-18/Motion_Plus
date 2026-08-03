@@ -21,10 +21,39 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
   String _selectedFilter = 'Today';
   DateTimeRange? _customRange;
 
+  String? _userRole;
+  String? _userClinicId;
+  String? _selectedClinicId;
+  List<dynamic> _clinics = [];
+  bool _isLoadingInitial = true;
+
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
+    _initData();
+  }
+
+  Future<void> _initData() async {
+    try {
+      final profile = await ApiService.get('/auth/me', includeAuth: true);
+      _userRole = profile['role'];
+      
+      if (_userRole == 'admin' || _userRole == 'therapist' || _userRole == 'therapist_assistant') {
+        _userClinicId = profile['clinic_id']?['_id'] ?? profile['clinic_id'];
+        _selectedClinicId = _userClinicId;
+      } else if (_userRole == 'superadmin') {
+        final clinicsData = await ApiService.get('/clinics', includeAuth: true);
+        _clinics = clinicsData as List<dynamic>;
+        if (_clinics.isNotEmpty) {
+          _selectedClinicId = _clinics.first['id'] ?? _clinics.first['_id'];
+        }
+      }
+    } catch (e) {
+      debugPrint('Error loading profile in analytics: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingInitial = false);
+    }
   }
 
   @override
@@ -150,74 +179,119 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
           ),
         ),
       ),
-      body: FutureBuilder(
-        future: ApiService.get('/sessions', includeAuth: true),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.wifi_off_rounded,
-                    size: 48,
-                    color: Colors.redAccent.withValues(alpha: 0.5),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'Analytics Unavailable',
-                    style: GoogleFonts.outfit(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.redAccent,
+      body: _isLoadingInitial 
+          ? const Center(child: CircularProgressIndicator()) 
+          : Column(
+              children: [
+                if (_userRole == 'superadmin' && _clinics.isNotEmpty)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                    color: Theme.of(context).cardColor,
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<String>(
+                        isExpanded: true,
+                        value: _selectedClinicId,
+                        icon: Icon(Icons.business_rounded, color: Theme.of(context).colorScheme.primary),
+                        items: _clinics.map((c) {
+                          final cId = (c['id'] ?? c['_id']).toString();
+                          return DropdownMenuItem<String>(
+                            value: cId,
+                            child: Text(
+                              c['name'] ?? 'Unknown Clinic',
+                              style: GoogleFonts.outfit(fontWeight: FontWeight.w600, fontSize: 16),
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() => _selectedClinicId = val);
+                          }
+                        },
+                      ),
                     ),
                   ),
-                  Text(
-                    'Check your connection to sync data',
-                    style: GoogleFonts.outfit(
-                      fontSize: 12,
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.onSurface.withValues(alpha: 0.6),
-                    ),
+                Expanded(
+                  child: _buildTreatmentStatsStream(),
+                ),
+              ],
+            ),
+    );
+  }
+
+  Widget _buildTreatmentStatsStream() {
+    String sessionsEndpoint = '/sessions';
+    if (_userRole == 'superadmin' && _selectedClinicId != null) {
+      sessionsEndpoint = '/sessions?clinic_id=$_selectedClinicId';
+    }
+
+    return FutureBuilder(
+      future: ApiService.get(sessionsEndpoint, includeAuth: true),
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Center(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.wifi_off_rounded,
+                  size: 48,
+                  color: Colors.redAccent.withValues(alpha: 0.5),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  'Analytics Unavailable',
+                  style: GoogleFonts.outfit(
+                    fontWeight: FontWeight.w700,
+                    color: Colors.redAccent,
                   ),
-                ],
-              ),
-            );
-          }
-          if (snapshot.connectionState == ConnectionState.waiting &&
-              !snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-
-          final allSessions = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
-
-          final startDate = _getStartDate();
-          final endDate = _getEndDate();
-
-          final sessions = allSessions.where((s) {
-            DateTime? sessionDate;
-            try {
-              if (s['scheduled_time'] != null) {
-                sessionDate = DateTime.parse(s['scheduled_time']);
-              }
-            } catch (_) {}
-            sessionDate ??= DateTime.tryParse(s['created_at'] ?? '');
-            if (sessionDate == null) return false;
-            return sessionDate.isAfter(
-                  startDate.subtract(const Duration(seconds: 1)),
-                ) &&
-                sessionDate.isBefore(endDate.add(const Duration(seconds: 1)));
-          }).toList();
-
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _buildTreatmentStats(sessions),
-              _buildHourlyTrends(sessions),
-            ],
+                ),
+                Text(
+                  'Check your connection to sync data',
+                  style: GoogleFonts.outfit(
+                    fontSize: 12,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+                ),
+              ],
+            ),
           );
-        },
-      ),
+        }
+        if (snapshot.connectionState == ConnectionState.waiting &&
+            !snapshot.hasData) {
+          return const Center(child: CircularProgressIndicator());
+        }
+
+        final allSessions = (snapshot.data as List?)?.cast<Map<String, dynamic>>() ?? [];
+
+        final startDate = _getStartDate();
+        final endDate = _getEndDate();
+
+        final sessions = allSessions.where((s) {
+          DateTime? sessionDate;
+          try {
+            if (s['scheduled_time'] != null) {
+              sessionDate = DateTime.parse(s['scheduled_time']);
+            }
+          } catch (_) {}
+          sessionDate ??= DateTime.tryParse(s['created_at'] ?? '');
+          if (sessionDate == null) return false;
+          return sessionDate.isAfter(
+                startDate.subtract(const Duration(seconds: 1)),
+              ) &&
+              sessionDate.isBefore(endDate.add(const Duration(seconds: 1)));
+        }).toList();
+
+        return TabBarView(
+          controller: _tabController,
+          children: [
+            _buildTreatmentStats(sessions),
+            _buildHourlyTrends(sessions),
+          ],
+        );
+      },
     );
   }
 
@@ -691,29 +765,6 @@ class _GlobalAnalyticsPageState extends State<GlobalAnalyticsPage>
             text,
             style: GoogleFonts.outfit(
               color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPlaceholder(String text) {
-    return Center(
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
-        children: [
-          Icon(
-            Icons.analytics_outlined,
-            size: 64,
-            color: Colors.blue.withValues(alpha: 0.1),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            text,
-            style: GoogleFonts.outfit(
-              color: const Color(0xFF64748B),
               fontWeight: FontWeight.w600,
             ),
           ),

@@ -167,44 +167,4 @@ class _PlatformSettingsPageState extends State<PlatformSettingsPage> {
       contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
     );
   }
-
-  Widget _buildSettingTile(
-    dynamic icon,
-    String title,
-    String subtitle, {
-    VoidCallback? onTap,
-  }) {
-    return ListTile(
-      leading: HugeIcon(
-        icon: icon,
-        color: Theme.of(context).colorScheme.primary,
-        size: 22,
-      ),
-      title: Text(
-        title,
-        style: GoogleFonts.outfit(
-          fontSize: 14,
-          fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.onSurface,
-        ),
-      ),
-      subtitle: Text(
-        subtitle,
-        style: GoogleFonts.outfit(
-          fontSize: 12,
-          color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
-        ),
-      ),
-      trailing: const Icon(
-        Icons.chevron_right_rounded,
-        color: Color(0xFFCBD5E1),
-      ),
-      onTap: onTap,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-    );
-  }
-
-  void _showPolicyDialog(String key, String? current) {
-    // Implementation for policy dialog
-  }
 }

@@ -242,14 +242,14 @@ class _StepsTrackerPageState extends State<StepsTrackerPage> {
     });
   }
 
-  void _onPedestrianStatusError(error) {
+  void _onPedestrianStatusError(Object error) {
     if (!mounted) return;
     setState(() {
       _status = 'Status not available';
     });
   }
 
-  void _onStepCountError(error) {
+  void _onStepCountError(Object error) {
     if (!mounted) return;
     setState(() {
       _todaySteps = 0;

@@ -223,7 +223,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
         ),
         content: Text(
           'Are you sure you want to log out of your account?',
-          style: GoogleFonts.outfit(color: AppTheme.softSlate),
+          style: GoogleFonts.outfit(color: const Color.fromARGB(255, 24, 25, 25)),
         ),
         actions: [
           TextButton(
@@ -232,7 +232,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               'CANCEL',
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.softSlate,
+                color: const Color.fromARGB(255, 17, 17, 17),
               ),
             ),
           ),
@@ -242,7 +242,7 @@ class _PatientProfilePageState extends State<PatientProfilePage> {
               'LOGOUT',
               style: GoogleFonts.outfit(
                 fontWeight: FontWeight.bold,
-                color: AppTheme.errorCoral,
+                color: const Color.fromARGB(255, 22, 22, 23),
               ),
             ),
           ),

@@ -37,7 +37,6 @@ class PatientDashboard extends StatefulWidget {
 
 class _PatientDashboardState extends State<PatientDashboard> {
   Map<String, dynamic>? _currentUser;
-  final bool _isExpanded = false;
   final Set<String> _notifiedSessions = {};
   int _selectedIndex = 0;
   String _filterType = 'Most Recent';
@@ -2518,24 +2517,6 @@ Feedback: ${feedbackController.text}
     );
   }
 
-  Widget _buildContactAction({
-    required dynamic icon,
-    required Color color,
-    required VoidCallback onTap,
-  }) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        padding: const EdgeInsets.all(8),
-        decoration: BoxDecoration(
-          color: color.withValues(alpha: 0.1),
-          borderRadius: BorderRadius.circular(10),
-        ),
-        child: hi.HugeIcon(icon: icon, color: color, size: 18),
-      ),
-    );
-  }
-
   Widget _buildCaregiverDashboardCard() {
     return Container(
       width: double.infinity,
@@ -2734,6 +2715,7 @@ Feedback: ${feedbackController.text}
     String? selectedLocationId;
     String? selectedLocationName;
     bool isSubmitting = false;
+    final ValueNotifier<String?> locationNotifier = ValueNotifier<String?>(null);
 
     final List<String> specializations = [
       'Ortho',
@@ -2825,7 +2807,10 @@ Feedback: ${feedbackController.text}
                       // Location Picker
                       _modalLabel('PREFERRED LOCATION'),
                       FutureBuilder<dynamic>(
-                        future: ApiService.get('/clinics', includeAuth: true),
+                        future: ApiService.get(
+                          '/clinics/${(_currentUser!['clinic_id'] is Map) ? (_currentUser!['clinic_id']['id'] ?? _currentUser!['clinic_id']['_id']) : _currentUser!['clinic_id']}', 
+                          includeAuth: true
+                        ),
                         builder: (context, snapshot) {
                           if (snapshot.connectionState ==
                               ConnectionState.waiting) {
@@ -2833,10 +2818,12 @@ Feedback: ${feedbackController.text}
                               child: CircularProgressIndicator(strokeWidth: 2),
                             );
                           }
-                          final clinicList = snapshot.data ?? [];
+                          final clinicData = snapshot.data ?? {};
+                          final List<dynamic> clinicList = clinicData['branches'] ?? [];
+                          
                           if (clinicList.isEmpty) {
                             return Text(
-                              'No clinics available',
+                              'No branches available for your clinic',
                               style: GoogleFonts.outfit(
                                 color: Colors.redAccent,
                                 fontSize: 12,
@@ -2845,8 +2832,9 @@ Feedback: ${feedbackController.text}
                           }
                           
                           // Set default selection if none chosen
-                          if (selectedLocationId == null && clinicList.isNotEmpty) {
-                            selectedLocationId = clinicList[0]['id'];
+                          if (locationNotifier.value == null && clinicList.isNotEmpty) {
+                            locationNotifier.value = (clinicList[0]['id'] ?? clinicList[0]['_id']).toString();
+                            selectedLocationId = locationNotifier.value;
                             selectedLocationName = clinicList[0]['name'];
                           }
                           
@@ -2858,12 +2846,13 @@ Feedback: ${feedbackController.text}
                             ),
                             child: DropdownButtonFormField2<String>(
                               isExpanded: true,
-                              valueListenable: ValueNotifier(selectedLocationId),
+                              valueListenable: locationNotifier,
                               items: clinicList.map((c) {
+                                final String cId = (c['id'] ?? c['_id']).toString();
                                 return DropdownItem<String>(
-                                  value: c['id'],
+                                  value: cId,
                                   child: Text(
-                                    c['name'],
+                                    c['name'] ?? 'Unknown',
                                     style: GoogleFonts.outfit(
                                       fontWeight: FontWeight.w600,
                                       color: const Color(0xFF1E293B),
@@ -2873,8 +2862,9 @@ Feedback: ${feedbackController.text}
                               }).toList(),
                               onChanged: (val) {
                                 setModalState(() {
+                                  locationNotifier.value = val;
                                   selectedLocationId = val;
-                                  selectedLocationName = clinicList.firstWhere((c) => c['id'] == val)['name'];
+                                  selectedLocationName = clinicList.firstWhere((c) => (c['id'] ?? c['_id']).toString() == val)['name'];
                                 });
                               },
                               decoration: InputDecoration(
@@ -3002,7 +2992,10 @@ Feedback: ${feedbackController.text}
                             final userId = _currentUser!['id'];
                             await ApiService.post('/sessions', {
                               'patient_id': userId,
-                              'clinic_id': selectedLocationId,
+                              'clinic_id': (_currentUser!['clinic_id'] is Map) 
+                                  ? (_currentUser!['clinic_id']['id'] ?? _currentUser!['clinic_id']['_id']) 
+                                  : _currentUser!['clinic_id'],
+                              'branch_id': selectedLocationId,
                               'specialization_required': selectedSpec,
                               'status': 'requested',
                               'created_at': DateTime.now().toIso8601String(),
