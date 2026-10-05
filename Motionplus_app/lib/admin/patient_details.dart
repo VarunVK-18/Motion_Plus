@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'pdf_report_generator.dart';
 import 'intake_pdf_generator.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'pdf_viewer_page.dart';
 
 class PatientDetailsPage extends StatefulWidget {
   final String patientId;
@@ -1248,15 +1249,17 @@ class _PatientDetailsPageState extends State<PatientDetailsPage> {
               onPressed: () async {
                 if (fileUrl != null) {
                   // Make sure fileUrl is an absolute URL if backend runs locally
-                  // Here we construct the full URL. E.g., ApiService.baseUrl + fileUrl
                   final fullUrl = ApiService.baseUrl.replaceAll('/api', '') + fileUrl;
-                  final uri = Uri.parse(fullUrl);
-                  if (await canLaunchUrl(uri)) {
-                    await launchUrl(uri, mode: LaunchMode.externalApplication);
-                  } else {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open document')));
-                    }
+                  if (context.mounted) {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => PdfViewerPage(
+                          url: fullUrl,
+                          fileName: fileName,
+                        ),
+                      ),
+                    );
                   }
                 }
               },

@@ -41,6 +41,14 @@ class NotificationService {
         sound: true,
       );
 
+      // Request Android 13+ local notification permissions
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestNotificationsPermission();
+      await _notificationsPlugin
+          .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+          ?.requestExactAlarmsPermission();
+
       FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
       
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
@@ -92,7 +100,7 @@ class NotificationService {
     final notification = message.notification;
     if (notification != null) {
       await showNotification(
-        id: notification.hashCode,
+        id: notification.hashCode.abs().remainder(100000),
         title: notification.title ?? '',
         body: notification.body ?? '',
       );

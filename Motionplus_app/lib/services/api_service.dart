@@ -121,21 +121,25 @@ class ApiService {
   static dynamic _processResponse(http.Response response) {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       if (response.body.isNotEmpty) {
-        final decoded = jsonDecode(response.body);
-        if (decoded is List) {
-          try {
-            // Attempt to cast to List<Map<String, dynamic>> if possible
-            if (decoded.isEmpty) return <Map<String, dynamic>>[];
-            if (decoded.first is Map) {
-              return List<Map<String, dynamic>>.from(
-                decoded.map((e) => Map<String, dynamic>.from(e as Map))
-              );
+        try {
+          final decoded = jsonDecode(response.body);
+          if (decoded is List) {
+            try {
+              // Attempt to cast to List<Map<String, dynamic>> if possible
+              if (decoded.isEmpty) return <Map<String, dynamic>>[];
+              if (decoded.first is Map) {
+                return List<Map<String, dynamic>>.from(
+                  decoded.map((e) => Map<String, dynamic>.from(e as Map))
+                );
+              }
+            } catch (_) {
+              // Fallback if elements aren't maps
             }
-          } catch (_) {
-            // Fallback if elements aren't maps
           }
+          return decoded;
+        } on FormatException catch (_) {
+          throw Exception('Received invalid JSON from server (Status: ${response.statusCode}).');
         }
-        return decoded;
       }
       return null;
     } else {
@@ -163,6 +167,7 @@ class ApiService {
       final url = '$baseUrl$endpoint';
       final request = http.MultipartRequest('POST', Uri.parse(url));
       final headers = await _getHeaders(includeAuth: includeAuth);
+      headers.remove('Content-Type');
       
       request.headers.addAll(headers);
       request.fields.addAll(fields);

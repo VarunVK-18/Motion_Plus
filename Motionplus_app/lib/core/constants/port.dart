@@ -10,7 +10,7 @@ class PortConstants {
       // Development URL when running locally (e.g., flutter run)
       // Note: Uses your PC's Wi-Fi IP so physical phone can connect
       if (defaultTargetPlatform == TargetPlatform.android) {
-        return 'http://192.168.29.105:5000';
+        return 'http://192.168.0.101:5000';
       } else {
         return 'http://localhost:5000';
       }

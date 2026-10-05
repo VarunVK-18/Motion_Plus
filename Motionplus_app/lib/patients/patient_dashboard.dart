@@ -442,7 +442,7 @@ class _PatientDashboardState extends State<PatientDashboard> {
                             final tName = tSnap['full_name'];
 
                             NotificationService.showNotification(
-                              id: s['id'].hashCode,
+                              id: s['id'].hashCode.abs().remainder(100000),
                               title: 'Treatment Completed',
                               body: 'Your session with $tName is now complete.',
                             );
